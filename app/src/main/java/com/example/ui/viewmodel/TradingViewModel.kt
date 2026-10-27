@@ -41,9 +41,10 @@ data class TradingUiState(
     val showBos: Boolean = true,
     val backtestSummary: BacktestSummary? = null,
     val userNotification: String? = null,
-    val developerName: String = "Sarfaraz",
-    val developerWhatsapp: String = "",
-    val showDeveloperDialog: Boolean = false
+    val developerName: String = "Rao Muhammad Sarfraz",
+    val developerWhatsapp: String = "+923360074976",
+    val showDeveloperDialog: Boolean = false,
+    val isRomanUrdu: Boolean = false
 )
 
 class TradingViewModel(application: Application) : AndroidViewModel(application) {
@@ -61,8 +62,9 @@ class TradingViewModel(application: Application) : AndroidViewModel(application)
 
     private val _uiState = MutableStateFlow(
         TradingUiState(
-            developerName = prefs.getString("dev_name", "Sarfaraz") ?: "Sarfaraz",
-            developerWhatsapp = prefs.getString("dev_whatsapp", "") ?: ""
+            developerName = prefs.getString("dev_name", "Rao Muhammad Sarfraz") ?: "Rao Muhammad Sarfraz",
+            developerWhatsapp = prefs.getString("dev_whatsapp", "+923360074976") ?: "+923360074976",
+            isRomanUrdu = prefs.getBoolean("is_roman_urdu", false)
         )
     )
     val uiState: StateFlow<TradingUiState> = _uiState.asStateFlow()
@@ -220,6 +222,42 @@ class TradingViewModel(application: Application) : AndroidViewModel(application)
             developerWhatsapp = cleanWhatsapp,
             userNotification = "Developer details saved successfully!"
         )
+    }
+
+    fun toggleLanguage() {
+        val newLang = !_uiState.value.isRomanUrdu
+        prefs.edit().putBoolean("is_roman_urdu", newLang).apply()
+        _uiState.value = _uiState.value.copy(isRomanUrdu = newLang)
+    }
+
+    fun openPaperTradeInstant(isLong: Boolean) {
+        val analysis = _uiState.value.analysisResult ?: return
+        val currentPrice = analysis.futuresStats?.lastPrice ?: analysis.candles.lastOrNull()?.close ?: return
+        val atr = analysis.indicators.atr14 ?: (currentPrice * 0.01)
+
+        val stopLoss = if (isLong) currentPrice - atr * 1.5 else currentPrice + atr * 1.5
+        val tp1 = if (isLong) currentPrice + atr * 2.25 else currentPrice - atr * 2.25
+        val tp2 = if (isLong) currentPrice + atr * 3.75 else currentPrice - atr * 3.75
+        val margin = _uiState.value.accountBalance * (_uiState.value.riskPercent / 100.0)
+
+        viewModelScope.launch {
+            repository.openPaperTrade(
+                symbol = _uiState.value.currentSymbol,
+                signalType = if (isLong) "LONG" else "SHORT",
+                entryPrice = currentPrice,
+                stopLoss = stopLoss,
+                tp1 = tp1,
+                tp2 = tp2,
+                margin = margin,
+                leverage = _uiState.value.leverage
+            )
+            val notif = if (_uiState.value.isRomanUrdu) {
+                "${if (isLong) "LONG" else "SHORT"} Trade chart per open ho gaya hai @ $$currentPrice"
+            } else {
+                "${if (isLong) "LONG" else "SHORT"} trade opened on chart @ $$currentPrice"
+            }
+            _uiState.value = _uiState.value.copy(userNotification = notif)
+        }
     }
 
     fun runBacktest() {

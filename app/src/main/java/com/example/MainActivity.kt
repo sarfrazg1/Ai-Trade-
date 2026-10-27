@@ -18,11 +18,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ShowChart
 import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.School
-import androidx.compose.material.icons.filled.ShowChart
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.WorkOutline
 import androidx.compose.material3.Button
@@ -110,6 +110,8 @@ fun SmartTradeApp(viewModel: TradingViewModel) {
                 errorMessage = uiState.errorMessage,
                 watchlist = watchlist,
                 developerName = uiState.developerName,
+                isRomanUrdu = uiState.isRomanUrdu,
+                onToggleLanguage = { viewModel.toggleLanguage() },
                 onDeveloperClick = { viewModel.selectTab(5) },
                 onSymbolSelected = { viewModel.selectPair(it) },
                 onTimeframeSelected = { viewModel.selectTimeframe(it) },
@@ -126,7 +128,7 @@ fun SmartTradeApp(viewModel: TradingViewModel) {
                     selected = uiState.selectedTab == 0,
                     onClick = { viewModel.selectTab(0) },
                     icon = { Icon(Icons.Default.Bolt, contentDescription = "Signal & Plan") },
-                    label = { Text("Signal", fontSize = 10.sp) },
+                    label = { Text(if (uiState.isRomanUrdu) "Signal" else "Signal", fontSize = 10.sp) },
                     colors = NavigationBarItemDefaults.colors(
                         selectedIconColor = Color.Black,
                         selectedTextColor = BullGreen,
@@ -139,8 +141,8 @@ fun SmartTradeApp(viewModel: TradingViewModel) {
                 NavigationBarItem(
                     selected = uiState.selectedTab == 1,
                     onClick = { viewModel.selectTab(1) },
-                    icon = { Icon(Icons.Default.ShowChart, contentDescription = "Chart & SMC") },
-                    label = { Text("Chart", fontSize = 10.sp) },
+                    icon = { Icon(Icons.AutoMirrored.Filled.ShowChart, contentDescription = "Chart & SMC") },
+                    label = { Text(if (uiState.isRomanUrdu) "Chart" else "Chart", fontSize = 10.sp) },
                     colors = NavigationBarItemDefaults.colors(
                         selectedIconColor = Color.Black,
                         selectedTextColor = AccentCyan,
@@ -154,7 +156,7 @@ fun SmartTradeApp(viewModel: TradingViewModel) {
                     selected = uiState.selectedTab == 2,
                     onClick = { viewModel.selectTab(2) },
                     icon = { Icon(Icons.Default.Speed, contentDescription = "Indicators") },
-                    label = { Text("Indicators", fontSize = 10.sp) },
+                    label = { Text(if (uiState.isRomanUrdu) "Ishare" else "Indicators", fontSize = 10.sp) },
                     colors = NavigationBarItemDefaults.colors(
                         selectedIconColor = Color.Black,
                         selectedTextColor = BullGreen,
@@ -182,7 +184,7 @@ fun SmartTradeApp(viewModel: TradingViewModel) {
                     selected = uiState.selectedTab == 4,
                     onClick = { viewModel.selectTab(4) },
                     icon = { Icon(Icons.Default.WorkOutline, contentDescription = "Paper Trading") },
-                    label = { Text("Paper", fontSize = 10.sp) },
+                    label = { Text(if (uiState.isRomanUrdu) "Trades" else "Paper", fontSize = 10.sp) },
                     colors = NavigationBarItemDefaults.colors(
                         selectedIconColor = Color.Black,
                         selectedTextColor = BullGreen,
@@ -196,7 +198,7 @@ fun SmartTradeApp(viewModel: TradingViewModel) {
                     selected = uiState.selectedTab == 5,
                     onClick = { viewModel.selectTab(5) },
                     icon = { Icon(Icons.Default.School, contentDescription = "Trader Guide") },
-                    label = { Text("Guide", fontSize = 10.sp) },
+                    label = { Text(if (uiState.isRomanUrdu) "Guide" else "Guide", fontSize = 10.sp) },
                     colors = NavigationBarItemDefaults.colors(
                         selectedIconColor = Color.Black,
                         selectedTextColor = AccentCyan,
@@ -218,12 +220,15 @@ fun SmartTradeApp(viewModel: TradingViewModel) {
             val analysis = uiState.analysisResult
 
             if (analysis != null) {
+                val livePrice = analysis.futuresStats?.lastPrice ?: analysis.candles.lastOrNull()?.close ?: 0.0
+
                 when (uiState.selectedTab) {
                     0 -> PlanAndConfluenceScreen(
                         analysis = analysis,
                         accountBalance = uiState.accountBalance,
                         riskPercent = uiState.riskPercent,
                         leverage = uiState.leverage,
+                        isRomanUrdu = uiState.isRomanUrdu,
                         onUpdateRisk = { b, r, l -> viewModel.updateRiskSettings(b, r, l) },
                         onExecutePaperTrade = { viewModel.executePaperTrade() },
                         onSaveSignal = { viewModel.saveCurrentSignal() }
@@ -239,23 +244,28 @@ fun SmartTradeApp(viewModel: TradingViewModel) {
                         showOrderBlocks = uiState.showOrderBlocks,
                         showFvg = uiState.showFvg,
                         showBos = uiState.showBos,
-                        onToggleOverlay = { viewModel.toggleOverlay(it) }
+                        onToggleOverlay = { viewModel.toggleOverlay(it) },
+                        activeTrades = paperTrades.filter { it.symbol.equals(uiState.currentSymbol, ignoreCase = true) },
+                        currentLivePrice = livePrice,
+                        isRomanUrdu = uiState.isRomanUrdu,
+                        onOpenInstantTrade = { isLong -> viewModel.openPaperTradeInstant(isLong) },
+                        onCloseTrade = { trade -> viewModel.closePaperTrade(trade) }
                     )
                     2 -> IndicatorsScreen(
                         indicators = analysis.indicators,
                         timeframe = uiState.selectedTimeframe,
-                        currentPrice = analysis.futuresStats?.lastPrice ?: analysis.candles.last().close
+                        currentPrice = livePrice
                     )
                     3 -> FuturesAnalyticsScreen(
                         stats = analysis.futuresStats,
                         smc = analysis.smc,
-                        currentPrice = analysis.futuresStats?.lastPrice ?: analysis.candles.last().close
+                        currentPrice = livePrice
                     )
                     4 -> PaperTradingScreen(
                         paperTrades = paperTrades,
                         savedSignals = savedSignals,
                         accountBalance = uiState.accountBalance,
-                        currentLivePrice = analysis.futuresStats?.lastPrice ?: analysis.candles.last().close,
+                        currentLivePrice = livePrice,
                         backtestSummary = uiState.backtestSummary,
                         onCloseTrade = { viewModel.closePaperTrade(it) },
                         onDeleteTrade = { viewModel.deletePaperTrade(it) },
@@ -265,6 +275,7 @@ fun SmartTradeApp(viewModel: TradingViewModel) {
                     5 -> BeginnerGuideScreen(
                         developerName = uiState.developerName,
                         developerWhatsapp = uiState.developerWhatsapp,
+                        isRomanUrdu = uiState.isRomanUrdu,
                         onUpdateDeveloperInfo = { name, wa -> viewModel.updateDeveloperInfo(name, wa) }
                     )
                 }

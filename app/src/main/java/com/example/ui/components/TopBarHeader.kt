@@ -67,7 +67,9 @@ fun TopBarHeader(
     isLoading: Boolean,
     errorMessage: String?,
     watchlist: List<WatchlistEntity>,
-    developerName: String = "Sarfaraz",
+    developerName: String = "Rao Muhammad Sarfraz",
+    isRomanUrdu: Boolean = false,
+    onToggleLanguage: () -> Unit = {},
     onDeveloperClick: () -> Unit = {},
     onSymbolSelected: (String) -> Unit,
     onTimeframeSelected: (Timeframe) -> Unit,
@@ -86,7 +88,7 @@ fun TopBarHeader(
                 .fillMaxWidth()
                 .padding(horizontal = 14.dp, vertical = 10.dp)
         ) {
-            // Row 1: App Brand, Live Status, Refresh
+            // Row 1: App Brand, Dev Badge, Language Toggle, Status, Refresh
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -109,7 +111,7 @@ fun TopBarHeader(
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
                         text = "Smart Trade AI",
-                        fontSize = 16.sp,
+                        fontSize = 15.sp,
                         fontWeight = FontWeight.Bold,
                         color = TextPrimary
                     )
@@ -122,8 +124,8 @@ fun TopBarHeader(
                             .padding(horizontal = 5.dp, vertical = 2.dp)
                     ) {
                         Text(
-                            text = "Dev: $developerName",
-                            fontSize = 10.sp,
+                            text = "Dev: Rao Sarfraz",
+                            fontSize = 9.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = BullGreen
                         )
@@ -131,6 +133,37 @@ fun TopBarHeader(
                 }
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
+                    // Language Switcher Toggle Pill
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(CryptoSurfaceVariant)
+                            .clickable { onToggleLanguage() }
+                            .padding(horizontal = 6.dp, vertical = 3.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = "ENG",
+                                fontSize = 10.sp,
+                                fontWeight = if (!isRomanUrdu) FontWeight.ExtraBold else FontWeight.Normal,
+                                color = if (!isRomanUrdu) AccentCyan else TextMuted
+                            )
+                            Text(
+                                text = " | ",
+                                fontSize = 10.sp,
+                                color = TextMuted
+                            )
+                            Text(
+                                text = "اردو",
+                                fontSize = 10.sp,
+                                fontWeight = if (isRomanUrdu) FontWeight.ExtraBold else FontWeight.Normal,
+                                color = if (isRomanUrdu) BullGreen else TextMuted
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.width(6.dp))
+
                     val timeStr = stats?.let {
                         SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date(it.lastUpdated))
                     } ?: "Offline"

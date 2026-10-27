@@ -2,6 +2,7 @@ package com.example.ui.components
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -17,8 +18,14 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -28,6 +35,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
@@ -37,12 +45,15 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.data.local.PaperTradeEntity
 import com.example.domain.calculator.TechnicalIndicatorsCalculator
 import com.example.domain.model.Candle
 import com.example.domain.model.FibonacciAnalysis
@@ -57,6 +68,7 @@ import com.example.ui.theme.CandleRed
 import com.example.ui.theme.CryptoBackground
 import com.example.ui.theme.CryptoCardBorder
 import com.example.ui.theme.CryptoSurface
+import com.example.ui.theme.CryptoSurfaceVariant
 import com.example.ui.theme.FvgBull
 import com.example.ui.theme.GoldenPocketGold
 import com.example.ui.theme.OrderBlockBear
@@ -82,14 +94,21 @@ fun CandlestickChart(
     showFvg: Boolean,
     showBos: Boolean,
     onToggleOverlay: (String) -> Unit,
+    activeTrades: List<PaperTradeEntity> = emptyList(),
+    currentLivePrice: Double = 0.0,
+    isRomanUrdu: Boolean = false,
+    onOpenInstantTrade: (Boolean) -> Unit = {},
+    onCloseTrade: (PaperTradeEntity) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var selectedCandleIndex by remember { mutableStateOf<Int?>(null) }
     val textMeasurer = rememberTextMeasurer()
 
+    val currentActiveTrade = activeTrades.firstOrNull { it.status == "OPEN" }
+
     Column(
         modifier = modifier
-            .fillMaxWidth()
+            .fillMaxSize()
             .background(CryptoBackground)
     ) {
         // Overlay Toggle FilterChips
@@ -116,7 +135,7 @@ fun CandlestickChart(
                 color = CryptoSurface,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 4.dp),
+                    .padding(horizontal = 12.dp, vertical = 2.dp),
                 shape = RoundedCornerShape(6.dp)
             ) {
                 Row(
@@ -144,17 +163,27 @@ fun CandlestickChart(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
-                .padding(horizontal = 8.dp, vertical = 4.dp)
+                .padding(horizontal = 8.dp, vertical = 2.dp)
         ) {
             if (candles.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("No candlestick data available", color = TextSecondary)
+                    Text(
+                        text = if (isRomanUrdu) "Candlestick data load ho raha hai..." else "No candlestick data available",
+                        color = TextSecondary
+                    )
                 }
             } else {
                 // Display latest 40 candles for clean mobile view
                 val visibleCandles = candles.takeLast(40.coerceAtMost(candles.size))
-                val minPrice = visibleCandles.minOf { it.low }
-                val maxPrice = visibleCandles.maxOf { it.high }
+                var minPrice = visibleCandles.minOf { it.low }
+                var maxPrice = visibleCandles.maxOf { it.high }
+
+                // Include active trade levels in viewable chart scale if near
+                if (currentActiveTrade != null) {
+                    minPrice = minOf(minPrice, currentActiveTrade.stopLoss, currentActiveTrade.entryPrice)
+                    maxPrice = maxOf(maxPrice, currentActiveTrade.tp1, currentActiveTrade.entryPrice)
+                }
+
                 val pricePadding = (maxPrice - minPrice) * 0.08
                 val chartMin = (minPrice - pricePadding).coerceAtLeast(0.0)
                 val chartMax = maxPrice + pricePadding
@@ -247,9 +276,376 @@ fun CandlestickChart(
                     if (showBos) {
                         drawBosLines(smc, visibleCandles, candles.size, slotWidth, chartMin, priceRange, canvasHeight, textMeasurer)
                     }
+
+                    // 7. Interactive Paper Trade Lines (Gate.io / Binance Futures Style)
+                    if (currentActiveTrade != null) {
+                        drawPaperTradeChartOverlay(
+                            trade = currentActiveTrade,
+                            chartMin = chartMin,
+                            chartMax = chartMax,
+                            priceRange = priceRange,
+                            canvasWidth = canvasWidth,
+                            canvasHeight = canvasHeight,
+                            textMeasurer = textMeasurer,
+                            isRomanUrdu = isRomanUrdu
+                        )
+                    }
                 }
             }
         }
+
+        // Bottom Gate.io / Binance Futures Style Position & Quick-Action HUD
+        if (currentActiveTrade != null) {
+            ActivePositionBar(
+                trade = currentActiveTrade,
+                currentPrice = if (currentLivePrice > 0) currentLivePrice else displayCandle?.close ?: currentActiveTrade.entryPrice,
+                isRomanUrdu = isRomanUrdu,
+                onCloseTrade = { onCloseTrade(currentActiveTrade) }
+            )
+        } else {
+            InstantTradeActionBar(
+                currentPrice = if (currentLivePrice > 0) currentLivePrice else displayCandle?.close ?: 0.0,
+                isRomanUrdu = isRomanUrdu,
+                onOpenLong = { onOpenInstantTrade(true) },
+                onOpenShort = { onOpenInstantTrade(false) }
+            )
+        }
+    }
+}
+
+@Composable
+private fun ActivePositionBar(
+    trade: PaperTradeEntity,
+    currentPrice: Double,
+    isRomanUrdu: Boolean,
+    onCloseTrade: () -> Unit
+) {
+    val isLong = trade.signalType == "LONG"
+    val diff = if (isLong) (currentPrice - trade.entryPrice) else (trade.entryPrice - currentPrice)
+    val pnlUsd = if (trade.entryPrice > 0) (diff / trade.entryPrice) * (trade.margin * trade.leverage) else 0.0
+    val pnlPct = if (trade.entryPrice > 0) (diff / trade.entryPrice) * trade.leverage * 100.0 else 0.0
+    val isPos = pnlUsd >= 0
+
+    Surface(
+        color = CryptoSurface,
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(1.dp, if (isLong) BullGreen.copy(alpha = 0.5f) else BearRed.copy(alpha = 0.5f), RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp))
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 8.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Left: Position badge & Symbol
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(if (isLong) BullGreen else BearRed)
+                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                    ) {
+                        Text(
+                            text = "${trade.signalType} ${trade.leverage}x",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Black,
+                            color = Color.Black
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = trade.symbol,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary
+                    )
+                }
+
+                // Close Button
+                Button(
+                    onClick = onCloseTrade,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = BearRed.copy(alpha = 0.2f),
+                        contentColor = BearRed
+                    ),
+                    shape = RoundedCornerShape(6.dp),
+                    modifier = Modifier.height(28.dp).testTag("close_paper_trade_button")
+                ) {
+                    Icon(imageVector = Icons.Default.Close, contentDescription = null, modifier = Modifier.size(12.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = if (isRomanUrdu) "Market Close" else "Market Close",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(6.dp))
+
+            // Middle: Metrics Row (Entry, Mark, Live PnL)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text(
+                        text = if (isRomanUrdu) "Dakhla (Entry)" else "Entry Price",
+                        fontSize = 10.sp,
+                        color = TextMuted
+                    )
+                    Text(
+                        text = "$${formatShortPrice(trade.entryPrice)}",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = AccentCyan
+                    )
+                }
+
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = if (isRomanUrdu) "Live Qeemat" else "Mark Price",
+                        fontSize = 10.sp,
+                        color = TextMuted
+                    )
+                    Text(
+                        text = "$${formatShortPrice(currentPrice)}",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary
+                    )
+                }
+
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(
+                        text = if (isRomanUrdu) "Nafa/Nuqsan (PnL)" else "Unrealized PnL",
+                        fontSize = 10.sp,
+                        color = TextMuted
+                    )
+                    Text(
+                        text = "${if (isPos) "+" else ""}$${String.format("%.2f", pnlUsd)} (${String.format("%.2f", pnlPct)}%)",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = if (isPos) BullGreen else BearRed
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            // SL & TP Badges
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = "SL: $${formatShortPrice(trade.stopLoss)}",
+                    fontSize = 10.sp,
+                    color = BearRed
+                )
+                Text(
+                    text = "TP1: $${formatShortPrice(trade.tp1)}",
+                    fontSize = 10.sp,
+                    color = BullGreen
+                )
+                Text(
+                    text = "Margin: $${String.format("%.1f", trade.margin)}",
+                    fontSize = 10.sp,
+                    color = TextMuted
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun InstantTradeActionBar(
+    currentPrice: Double,
+    isRomanUrdu: Boolean,
+    onOpenLong: () -> Unit,
+    onOpenShort: () -> Unit
+) {
+    Surface(
+        color = CryptoSurface,
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(1.dp, CryptoCardBorder, RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp))
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 8.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = if (isRomanUrdu) "Live Chart Paper Trade (5x Lev • 2% Risk)" else "Instant Paper Trade (5x Lev • 2% Risk)",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = TextSecondary
+                )
+                Text(
+                    text = if (currentPrice > 0) "$${formatShortPrice(currentPrice)}" else "",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TextPrimary
+                )
+            }
+
+            Spacer(modifier = Modifier.height(6.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Button(
+                    onClick = onOpenLong,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = BullGreen,
+                        contentColor = Color.Black
+                    ),
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(38.dp)
+                        .testTag("instant_long_button")
+                ) {
+                    Text(
+                        text = if (isRomanUrdu) "▲ BUY / LONG (Kharidari)" else "▲ BUY / LONG",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                Button(
+                    onClick = onOpenShort,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = BearRed,
+                        contentColor = Color.White
+                    ),
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(38.dp)
+                        .testTag("instant_short_button")
+                ) {
+                    Text(
+                        text = if (isRomanUrdu) "▼ SELL / SHORT (Farokht)" else "▼ SELL / SHORT",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        }
+    }
+}
+
+private fun DrawScope.drawPaperTradeChartOverlay(
+    trade: PaperTradeEntity,
+    chartMin: Double,
+    chartMax: Double,
+    priceRange: Double,
+    canvasWidth: Float,
+    canvasHeight: Float,
+    textMeasurer: TextMeasurer,
+    isRomanUrdu: Boolean
+) {
+    fun yOf(price: Double): Float = (canvasHeight * (1.0 - (price - chartMin) / priceRange)).toFloat()
+
+    val isLong = trade.signalType == "LONG"
+
+    // 1. Draw Entry Price Line (Cyan solid with glow effect)
+    if (trade.entryPrice in chartMin..chartMax) {
+        val yEntry = yOf(trade.entryPrice)
+        drawLine(
+            color = AccentCyan,
+            start = Offset(0f, yEntry),
+            end = Offset(canvasWidth, yEntry),
+            strokeWidth = 2.2f
+        )
+
+        val entryLabel = if (isRomanUrdu) {
+            "ENTRY [${trade.signalType} ${trade.leverage}x] $${formatShortPrice(trade.entryPrice)}"
+        } else {
+            "ENTRY [${trade.signalType} ${trade.leverage}x] $${formatShortPrice(trade.entryPrice)}"
+        }
+        val layout = textMeasurer.measure(
+            text = entryLabel,
+            style = TextStyle(fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+        )
+        // Background badge
+        drawRect(
+            color = AccentCyan,
+            topLeft = Offset(8f, yEntry - layout.size.height - 2f),
+            size = Size(layout.size.width + 12f, layout.size.height + 4f)
+        )
+        drawText(
+            textLayoutResult = layout,
+            topLeft = Offset(14f, yEntry - layout.size.height)
+        )
+    }
+
+    // 2. Draw Take Profit Line (Green dashed)
+    if (trade.tp1 in chartMin..chartMax) {
+        val yTp = yOf(trade.tp1)
+        drawLine(
+            color = BullGreen,
+            start = Offset(0f, yTp),
+            end = Offset(canvasWidth, yTp),
+            strokeWidth = 1.8f,
+            pathEffect = PathEffect.dashPathEffect(floatArrayOf(8f, 6f))
+        )
+
+        val tpLabel = if (isRomanUrdu) "TP1 (Nafa): $${formatShortPrice(trade.tp1)}" else "TP1 (Target): $${formatShortPrice(trade.tp1)}"
+        val layout = textMeasurer.measure(
+            text = tpLabel,
+            style = TextStyle(fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+        )
+        drawRect(
+            color = BullGreen,
+            topLeft = Offset(8f, yTp - layout.size.height - 2f),
+            size = Size(layout.size.width + 12f, layout.size.height + 4f)
+        )
+        drawText(
+            textLayoutResult = layout,
+            topLeft = Offset(14f, yTp - layout.size.height)
+        )
+    }
+
+    // 3. Draw Stop Loss Line (Red dashed)
+    if (trade.stopLoss in chartMin..chartMax) {
+        val ySl = yOf(trade.stopLoss)
+        drawLine(
+            color = BearRed,
+            start = Offset(0f, ySl),
+            end = Offset(canvasWidth, ySl),
+            strokeWidth = 1.8f,
+            pathEffect = PathEffect.dashPathEffect(floatArrayOf(8f, 6f))
+        )
+
+        val slLabel = if (isRomanUrdu) "SL (Hifazat): $${formatShortPrice(trade.stopLoss)}" else "SL (Stop Loss): $${formatShortPrice(trade.stopLoss)}"
+        val layout = textMeasurer.measure(
+            text = slLabel,
+            style = TextStyle(fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color.White)
+        )
+        drawRect(
+            color = BearRed,
+            topLeft = Offset(8f, ySl - layout.size.height - 2f),
+            size = Size(layout.size.width + 12f, layout.size.height + 4f)
+        )
+        drawText(
+            textLayoutResult = layout,
+            topLeft = Offset(14f, ySl - layout.size.height)
+        )
     }
 }
 

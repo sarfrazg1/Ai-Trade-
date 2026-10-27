@@ -72,6 +72,7 @@ fun PlanAndConfluenceScreen(
     accountBalance: Double,
     riskPercent: Double,
     leverage: Int,
+    isRomanUrdu: Boolean = false,
     onUpdateRisk: (Double, Double, Int) -> Unit,
     onExecutePaperTrade: () -> Unit,
     onSaveSignal: () -> Unit,
@@ -89,22 +90,22 @@ fun PlanAndConfluenceScreen(
             .padding(14.dp)
     ) {
         // 1. Hero Signal Banner
-        HeroSignalBanner(plan = plan, confluence = confluence)
+        HeroSignalBanner(plan = plan, confluence = confluence, isRomanUrdu = isRomanUrdu)
 
         Spacer(modifier = Modifier.height(14.dp))
 
         // 2. Confluence Score Gauge Card
-        ConfluenceScoreCard(confluence = confluence)
+        ConfluenceScoreCard(confluence = confluence, isRomanUrdu = isRomanUrdu)
 
         Spacer(modifier = Modifier.height(14.dp))
 
         // 3. Multi-Timeframe Alignment Card
-        MtfAlignmentCard(mtf = mtf)
+        MtfAlignmentCard(mtf = mtf, isRomanUrdu = isRomanUrdu)
 
         Spacer(modifier = Modifier.height(14.dp))
 
         // 4. Complete Trading Plan
-        TradingPlanDetailsCard(plan = plan)
+        TradingPlanDetailsCard(plan = plan, isRomanUrdu = isRomanUrdu)
 
         Spacer(modifier = Modifier.height(14.dp))
 
@@ -112,7 +113,8 @@ fun PlanAndConfluenceScreen(
         EvidenceCard(
             supporting = confluence.supportingFactors,
             conflicting = confluence.conflictingFactors,
-            missing = confluence.missingDataFactors
+            missing = confluence.missingDataFactors,
+            isRomanUrdu = isRomanUrdu
         )
 
         Spacer(modifier = Modifier.height(14.dp))
@@ -123,6 +125,7 @@ fun PlanAndConfluenceScreen(
             accountBalance = accountBalance,
             riskPercent = riskPercent,
             leverage = leverage,
+            isRomanUrdu = isRomanUrdu,
             onUpdateRisk = onUpdateRisk
         )
 
@@ -156,9 +159,13 @@ fun PlanAndConfluenceScreen(
                 )
                 Spacer(modifier = Modifier.width(6.dp))
                 Text(
-                    text = if (plan.signal == SignalType.WAIT) "WAIT (No Trade)" else "Paper Trade Setup",
+                    text = if (plan.signal == SignalType.WAIT) {
+                        if (isRomanUrdu) "WAIT (Sabar Karein)" else "WAIT (No Trade)"
+                    } else {
+                        if (isRomanUrdu) "Paper Trade Lagayein" else "Paper Trade Setup"
+                    },
                     fontWeight = FontWeight.Bold,
-                    fontSize = 14.sp
+                    fontSize = 13.sp
                 )
             }
 
@@ -179,7 +186,10 @@ fun PlanAndConfluenceScreen(
                     tint = AccentCyan
                 )
                 Spacer(modifier = Modifier.width(4.dp))
-                Text("Save", fontSize = 13.sp)
+                Text(
+                    text = if (isRomanUrdu) "Mehfooz" else "Save",
+                    fontSize = 13.sp
+                )
             }
         }
 
@@ -188,25 +198,25 @@ fun PlanAndConfluenceScreen(
 }
 
 @Composable
-private fun HeroSignalBanner(plan: TradingPlan, confluence: ConfluenceScore) {
+private fun HeroSignalBanner(plan: TradingPlan, confluence: ConfluenceScore, isRomanUrdu: Boolean = false) {
     val (signalColor, glowColor, signalTitle, signalSubtitle) = when (plan.signal) {
         SignalType.LONG -> Quadruple(
             BullGreen,
             BullGreenGlow,
-            "LONG SIGNAL DETECTED",
-            "High Confluence Bullish Setup (${confluence.totalScore}/100)"
+            if (isRomanUrdu) "BUY / LONG (Kharidari Setup)" else "LONG SIGNAL DETECTED",
+            if (isRomanUrdu) "Mazboot Bullish Confluence Score (${confluence.totalScore}/100)" else "High Confluence Bullish Setup (${confluence.totalScore}/100)"
         )
         SignalType.SHORT -> Quadruple(
             BearRed,
             BearRedGlow,
-            "SHORT SIGNAL DETECTED",
-            "High Confluence Bearish Setup (${confluence.totalScore}/100)"
+            if (isRomanUrdu) "SELL / SHORT (Farokht Setup)" else "SHORT SIGNAL DETECTED",
+            if (isRomanUrdu) "Mazboot Bearish Confluence Score (${confluence.totalScore}/100)" else "High Confluence Bearish Setup (${confluence.totalScore}/100)"
         )
         SignalType.WAIT -> Quadruple(
             WarningAmber,
             WarningAmberGlow,
-            "WAIT - NO TRADE",
-            "Signals conflicting or score (${confluence.totalScore}/100) below 65"
+            if (isRomanUrdu) "WAIT - KOI TRADE NA LEIN" else "WAIT - NO TRADE",
+            if (isRomanUrdu) "Ishare mutazaad hain ya score (${confluence.totalScore}/100) 65 se kam hai" else "Signals conflicting or score (${confluence.totalScore}/100) below 65"
         )
     }
 
@@ -234,7 +244,7 @@ private fun HeroSignalBanner(plan: TradingPlan, confluence: ConfluenceScore) {
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
                         text = signalTitle,
-                        fontSize = 17.sp,
+                        fontSize = 16.sp,
                         fontWeight = FontWeight.ExtraBold,
                         color = signalColor
                     )
@@ -242,7 +252,7 @@ private fun HeroSignalBanner(plan: TradingPlan, confluence: ConfluenceScore) {
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = signalSubtitle,
-                    fontSize = 12.sp,
+                    fontSize = 11.sp,
                     color = TextSecondary
                 )
             }
@@ -255,8 +265,14 @@ private fun HeroSignalBanner(plan: TradingPlan, confluence: ConfluenceScore) {
                     .padding(horizontal = 14.dp, vertical = 8.dp)
             ) {
                 Text(
-                    text = plan.signal.name,
-                    fontSize = 18.sp,
+                    text = if (isRomanUrdu) {
+                        when (plan.signal) {
+                            SignalType.LONG -> "LONG ▲"
+                            SignalType.SHORT -> "SHORT ▼"
+                            SignalType.WAIT -> "WAIT ⏸"
+                        }
+                    } else plan.signal.name,
+                    fontSize = 16.sp,
                     fontWeight = FontWeight.Black,
                     color = Color.Black
                 )
@@ -266,7 +282,7 @@ private fun HeroSignalBanner(plan: TradingPlan, confluence: ConfluenceScore) {
 }
 
 @Composable
-private fun ConfluenceScoreCard(confluence: ConfluenceScore) {
+private fun ConfluenceScoreCard(confluence: ConfluenceScore, isRomanUrdu: Boolean = false) {
     Card(
         colors = CardDefaults.cardColors(containerColor = CryptoSurface),
         shape = RoundedCornerShape(12.dp),
@@ -279,7 +295,7 @@ private fun ConfluenceScoreCard(confluence: ConfluenceScore) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Confluence Scoring Engine",
+                    text = if (isRomanUrdu) "Confluence Score Engine" else "Confluence Scoring Engine",
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,
                     color = TextPrimary
@@ -319,16 +335,20 @@ private fun ConfluenceScoreCard(confluence: ConfluenceScore) {
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                SubScoreItem(label = "Trend (4H/1D)", score = confluence.trendScore, max = 25)
-                SubScoreItem(label = "Indicators", score = confluence.indicatorScore, max = 25)
-                SubScoreItem(label = "SMC / BOS", score = confluence.smcScore, max = 25)
-                SubScoreItem(label = "Derivatives", score = confluence.liquidityScore, max = 15)
-                SubScoreItem(label = "Fibonacci", score = confluence.fibonacciScore, max = 10)
+                SubScoreItem(label = if (isRomanUrdu) "Trend" else "Trend (4H/1D)", score = confluence.trendScore, max = 25)
+                SubScoreItem(label = if (isRomanUrdu) "Indicators" else "Indicators", score = confluence.indicatorScore, max = 25)
+                SubScoreItem(label = if (isRomanUrdu) "SMC/BOS" else "SMC / BOS", score = confluence.smcScore, max = 25)
+                SubScoreItem(label = if (isRomanUrdu) "Funding" else "Derivatives", score = confluence.liquidityScore, max = 15)
+                SubScoreItem(label = if (isRomanUrdu) "Fibonacci" else "Fibonacci", score = confluence.fibonacciScore, max = 10)
             }
 
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "Threshold for trade entry is 65+. Scored strictly with confirmed candle closes to prevent look-ahead bias.",
+                text = if (isRomanUrdu) {
+                    "Trade lene ka miyar 65+ score hai. Agar score kam ho to sabar karein ta k sarmaya mehfooz rahe."
+                } else {
+                    "Threshold for trade entry is 65+. Scored strictly with confirmed candle closes to prevent look-ahead bias."
+                },
                 fontSize = 10.sp,
                 color = TextMuted
             )
@@ -345,7 +365,7 @@ private fun SubScoreItem(label: String, score: Int, max: Int) {
 }
 
 @Composable
-private fun MtfAlignmentCard(mtf: MultiTimeframeAnalysis) {
+private fun MtfAlignmentCard(mtf: MultiTimeframeAnalysis, isRomanUrdu: Boolean = false) {
     Card(
         colors = CardDefaults.cardColors(containerColor = CryptoSurface),
         shape = RoundedCornerShape(12.dp),
@@ -353,7 +373,7 @@ private fun MtfAlignmentCard(mtf: MultiTimeframeAnalysis) {
     ) {
         Column(modifier = Modifier.padding(14.dp)) {
             Text(
-                text = "Multi-Timeframe Structure Matrix",
+                text = if (isRomanUrdu) "Multi-Timeframe Structure Matrix (Bari aur Choti Timeframes)" else "Multi-Timeframe Structure Matrix",
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Bold,
                 color = TextPrimary
@@ -387,7 +407,11 @@ private fun MtfAlignmentCard(mtf: MultiTimeframeAnalysis) {
                         modifier = Modifier.size(16.dp)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text(text = mtf.conflictReason, fontSize = 11.sp, color = WarningAmber)
+                    Text(
+                        text = if (isRomanUrdu) "Ikhtilaf: Timeframes aapas me match nahi kar rahein, intazar behtar hai." else mtf.conflictReason,
+                        fontSize = 11.sp,
+                        color = WarningAmber
+                    )
                 }
             }
         }
@@ -417,7 +441,7 @@ private fun MtfBadge(tf: String, trend: TrendDirection) {
 }
 
 @Composable
-private fun TradingPlanDetailsCard(plan: TradingPlan) {
+private fun TradingPlanDetailsCard(plan: TradingPlan, isRomanUrdu: Boolean = false) {
     Card(
         colors = CardDefaults.cardColors(containerColor = CryptoSurface),
         shape = RoundedCornerShape(12.dp),
@@ -429,7 +453,7 @@ private fun TradingPlanDetailsCard(plan: TradingPlan) {
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = "Complete Trading Plan",
+                    text = if (isRomanUrdu) "Mukammal Trading Plan" else "Complete Trading Plan",
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,
                     color = TextPrimary
@@ -445,27 +469,27 @@ private fun TradingPlanDetailsCard(plan: TradingPlan) {
             Spacer(modifier = Modifier.height(12.dp))
 
             PlanMetricRow(
-                label = "Suggested Entry Zone",
+                label = if (isRomanUrdu) "Dakhla Zone (Suggested Entry)" else "Suggested Entry Zone",
                 value = "$${formatPrice(plan.entryMin)} - $${formatPrice(plan.entryMax)}",
                 color = TextPrimary
             )
             PlanMetricRow(
-                label = "Stop Loss (Invalidation)",
+                label = if (isRomanUrdu) "Stop Loss (Nuqsan se Bachao)" else "Stop Loss (Invalidation)",
                 value = "$${formatPrice(plan.stopLoss)}",
                 color = BearRed
             )
             PlanMetricRow(
-                label = "Take Profit 1 (1:1.5)",
+                label = if (isRomanUrdu) "Target 1 (Pehla Nafa)" else "Take Profit 1 (1:1.5)",
                 value = "$${formatPrice(plan.tp1)}",
                 color = BullGreen
             )
             PlanMetricRow(
-                label = "Take Profit 2 (1:2.5 / Fibo)",
+                label = if (isRomanUrdu) "Target 2 (Fibo Golden Pocket)" else "Take Profit 2 (1:2.5 / Fibo)",
                 value = "$${formatPrice(plan.tp2)}",
                 color = BullGreen
             )
             PlanMetricRow(
-                label = "Take Profit 3 (Runner)",
+                label = if (isRomanUrdu) "Target 3 (Runner Nafa)" else "Take Profit 3 (Runner)",
                 value = "$${formatPrice(plan.tp3)}",
                 color = BullGreen
             )
@@ -491,7 +515,8 @@ private fun PlanMetricRow(label: String, value: String, color: Color) {
 private fun EvidenceCard(
     supporting: List<String>,
     conflicting: List<String>,
-    missing: List<String>
+    missing: List<String>,
+    isRomanUrdu: Boolean = false
 ) {
     Card(
         colors = CardDefaults.cardColors(containerColor = CryptoSurface),
@@ -500,7 +525,7 @@ private fun EvidenceCard(
     ) {
         Column(modifier = Modifier.padding(14.dp)) {
             Text(
-                text = "Technical Evidence Breakdown",
+                text = if (isRomanUrdu) "Technical Evidence Breakdown (Wajohat aur Ishare)" else "Technical Evidence Breakdown",
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Bold,
                 color = TextPrimary
@@ -509,13 +534,14 @@ private fun EvidenceCard(
 
             if (supporting.isNotEmpty()) {
                 Text(
-                    text = "Supporting Factors (${supporting.size}):",
+                    text = if (isRomanUrdu) "Haq me Wajohat / Supporting Factors (${supporting.size}):" else "Supporting Factors (${supporting.size}):",
                     fontSize = 12.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = BullGreen
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 supporting.forEach { item ->
+                    val displayText = if (isRomanUrdu) translateFactorToRomanUrdu(item) else item
                     Row(
                         modifier = Modifier.padding(vertical = 2.dp),
                         verticalAlignment = Alignment.Top
@@ -529,7 +555,7 @@ private fun EvidenceCard(
                                 .padding(top = 2.dp)
                         )
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text(text = item, fontSize = 11.sp, color = TextPrimary)
+                        Text(text = displayText, fontSize = 11.sp, color = TextPrimary)
                     }
                 }
             }
@@ -537,13 +563,14 @@ private fun EvidenceCard(
             if (conflicting.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "Conflicting / Risk Factors (${conflicting.size}):",
+                    text = if (isRomanUrdu) "Khatrat / Mukhalif Wajohat (${conflicting.size}):" else "Conflicting / Risk Factors (${conflicting.size}):",
                     fontSize = 12.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = BearRed
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 conflicting.forEach { item ->
+                    val displayText = if (isRomanUrdu) translateFactorToRomanUrdu(item) else item
                     Row(
                         modifier = Modifier.padding(vertical = 2.dp),
                         verticalAlignment = Alignment.Top
@@ -557,7 +584,7 @@ private fun EvidenceCard(
                                 .padding(top = 2.dp)
                         )
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text(text = item, fontSize = 11.sp, color = TextSecondary)
+                        Text(text = displayText, fontSize = 11.sp, color = TextSecondary)
                     }
                 }
             }
@@ -565,7 +592,7 @@ private fun EvidenceCard(
             if (missing.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "Missing / Unavailable Data (${missing.size}):",
+                    text = if (isRomanUrdu) "Ghair Dastyab Data (${missing.size}):" else "Missing / Unavailable Data (${missing.size}):",
                     fontSize = 12.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = TextMuted
@@ -579,12 +606,47 @@ private fun EvidenceCard(
     }
 }
 
+private fun translateFactorToRomanUrdu(factor: String): String {
+    val f = factor.lowercase()
+    return when {
+        f.contains("higher timeframe 4h trend is bullish") -> "Bari timeframe (4H) ka trend Bullish hai (Khareedari ka rujhan)."
+        f.contains("higher timeframe 4h trend is bearish") -> "Bari timeframe (4H) ka trend Bearish hai (Farokht ka rujhan)."
+        f.contains("daily macro trend is bullish") -> "Daily (1D) macro trend mazboot Bullish hai."
+        f.contains("daily macro trend is bearish") -> "Daily (1D) macro trend Bearish hai."
+        f.contains("price above ema 20 and ema 50") -> "Price EMA 20 aur EMA 50 k upar chal rahi hai (Mazboot Uptrend)."
+        f.contains("price below ema 20 and ema 50") -> "Price EMA 20 aur EMA 50 k nechy chal rahi hai (Mazboot Downtrend)."
+        f.contains("rsi") && f.contains("bullish") -> "RSI momentum Bullish hai (Buyers market control kar rahy hain)."
+        f.contains("rsi") && f.contains("bearish") -> "RSI momentum Bearish hai (Sellers ka dabao ziada hai)."
+        f.contains("rsi") && f.contains("oversold") -> "RSI oversold zone me hai, bounce hone k imkanat hain."
+        f.contains("rsi") && f.contains("overbought") -> "RSI overbought zone me hai, pull back ka khatra hai."
+        f.contains("macd histogram is bullish") -> "MACD Histogram positive hai aur upar barh raha hai."
+        f.contains("macd histogram is bearish") -> "MACD Histogram negative hai aur nechy ja raha hai."
+        f.contains("bullish break of structure") || f.contains("bullish bos") -> "Bullish Break of Structure (BOS) confirm hua hai (Trend agay barh raha hai)."
+        f.contains("bearish break of structure") || f.contains("bearish bos") -> "Bearish Break of Structure (BOS) confirm hua hai (Trend nechy toot raha hai)."
+        f.contains("change of character") || f.contains("choch") -> "Change of Character (CHoCH) structural reversal ka ishara de raha hai."
+        f.contains("bullish order block") -> "Bullish Order Block (Institutions ki demand zone) kareeb hai."
+        f.contains("bearish order block") -> "Bearish Order Block (Institutions ki supply zone) kareeb hai."
+        f.contains("fair value gap") || f.contains("fvg") -> "Fair Value Gap (FVG price pocket) retest ho chuki hai."
+        f.contains("liquidity sweep") -> "Liquidity sweep ho chuki hai (Stop hunts mukammal ho gaye)."
+        f.contains("fibonacci golden pocket") -> "Price Fibonacci Golden Pocket (61.8% - 78.6%) key level per hai."
+        f.contains("funding rate is negative") -> "Futures Funding Rate negative hai (Short squeeze ka imkan)."
+        f.contains("funding rate is positive") -> "Futures Funding Rate positive hai (Long positions active hain)."
+        f.contains("open interest is rising") -> "Open Interest (OI) barh raha hai (Naya sarmaya futures market me aa raha hai)."
+        f.contains("volume above 20-period average") -> "Volume 20-period average se ziada hai (Bari activity)."
+        f.contains("timeframe conflict") -> "Timeframes aapas me mukhalif hain (4H aur 15m me farq hai)."
+        f.contains("resistance") -> "Price ahem Resistance zone k bilkul kareeb hai."
+        f.contains("support") -> "Price ahem Support zone k kareeb trade kar rahi hai."
+        else -> factor
+    }
+}
+
 @Composable
 private fun RiskCalculatorCard(
     plan: TradingPlan,
     accountBalance: Double,
     riskPercent: Double,
     leverage: Int,
+    isRomanUrdu: Boolean = false,
     onUpdateRisk: (Double, Double, Int) -> Unit
 ) {
     var balanceInput by remember(accountBalance) { mutableStateOf(accountBalance.toInt().toString()) }
