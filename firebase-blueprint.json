@@ -1,0 +1,57 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile with plan and reference data",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "email": { "type": "string" },
+        "displayName": { "type": "string" },
+        "subscriptionPlan": { "type": "string" },
+        "subscriptionExpiry": { "type": "string" },
+        "userReferenceId": { "type": "string" },
+        "referralCode": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "subscriptionPlan", "userReferenceId"]
+    },
+    "PaperTrade": {
+      "title": "PaperTrade",
+      "description": "Simulated futures position",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "symbol": { "type": "string" },
+        "entryPrice": { "type": "number" },
+        "stopLoss": { "type": "number" },
+        "takeProfit": { "type": "number" },
+        "positionSize": { "type": "number" },
+        "side": { "type": "string" },
+        "status": { "type": "string" },
+        "pnl": { "type": "number" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "userId", "symbol", "entryPrice", "side", "status"]
+    },
+    "ActivationRequest": {
+      "title": "ActivationRequest",
+      "description": "Manual activation record for subscription",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "userReferenceId": { "type": "string" },
+        "plan": { "type": "string" },
+        "status": { "type": "string" },
+        "activationCode": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "userId", "userReferenceId", "plan", "status"]
+    }
+  },
+  "firestore": {
+    "rules": "firestore.rules"
+  }
+}

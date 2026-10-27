@@ -1,0 +1,8 @@
+{
+  "firestore": [
+    {
+      "database": "ai-studio-android-smarttra-b127700d-7565-4609-9514-50108210f024",
+      "rules": "firestore.rules"
+    }
+  ]
+}

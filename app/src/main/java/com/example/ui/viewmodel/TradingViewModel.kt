@@ -50,7 +50,13 @@ data class TradingUiState(
     val showAdminModal: Boolean = false,
     val showInfluencerModal: Boolean = false,
     val showLegalModal: Boolean = false,
-    val legalTab: String = "DISCLAIMER"
+    val legalTab: String = "DISCLAIMER",
+    // Firebase Auth & Cloud Firestore
+    val googleUserEmail: String? = null,
+    val googleDisplayName: String? = null,
+    val isGoogleSignedIn: Boolean = false,
+    val isCloudSyncing: Boolean = false,
+    val lastCloudSyncTimestamp: Long? = null
 )
 
 class TradingViewModel(application: Application) : AndroidViewModel(application) {
@@ -59,6 +65,9 @@ class TradingViewModel(application: Application) : AndroidViewModel(application)
 
     val subscriptionManager = com.example.data.repository.SubscriptionManager(application.applicationContext)
     val subscriptionState = subscriptionManager.subscriptionState
+
+    val googleAuthManager = com.example.data.repository.GoogleAuthManager(application.applicationContext)
+    val firestoreSyncRepository = com.example.data.repository.FirestoreSyncRepository(application.applicationContext)
 
     private val db = Room.databaseBuilder(
         application.applicationContext,
@@ -93,6 +102,18 @@ class TradingViewModel(application: Application) : AndroidViewModel(application)
         viewModelScope.launch {
             repository.seedDefaultWatchlistIfNeeded()
             loadCurrentPair()
+        }
+        viewModelScope.launch {
+            googleAuthManager.currentUser.collect { user ->
+                _uiState.value = _uiState.value.copy(
+                    googleUserEmail = user?.email,
+                    googleDisplayName = user?.displayName,
+                    isGoogleSignedIn = user != null
+                )
+                if (user != null) {
+                    firestoreSyncRepository.syncUserProfile(user, subscriptionState.value)
+                }
+            }
         }
     }
 
@@ -320,6 +341,56 @@ class TradingViewModel(application: Application) : AndroidViewModel(application)
     fun acceptLegalConsent() {
         subscriptionManager.recordLegalConsent(disclaimer = true, terms = true)
         _uiState.value = _uiState.value.copy(userNotification = "Terms & Disclaimer accepted.")
+        val user = googleAuthManager.currentUser.value
+        if (user != null) {
+            viewModelScope.launch {
+                firestoreSyncRepository.syncUserProfile(user, subscriptionState.value)
+            }
+        }
+    }
+
+    fun signInWithGoogle() {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true)
+            val result = googleAuthManager.signInWithGoogle()
+            _uiState.value = _uiState.value.copy(isLoading = false)
+            result.onSuccess { user ->
+                _uiState.value = _uiState.value.copy(
+                    userNotification = "Google Sign-In successful: ${user.displayName ?: user.email}"
+                )
+                firestoreSyncRepository.syncUserProfile(user, subscriptionState.value)
+            }.onFailure { err ->
+                _uiState.value = _uiState.value.copy(
+                    userNotification = "Sign in cancelled or failed: ${err.localizedMessage ?: "Unknown error"}"
+                )
+            }
+        }
+    }
+
+    fun signOutGoogle() {
+        googleAuthManager.signOut()
+        _uiState.value = _uiState.value.copy(
+            userNotification = "Signed out of Google account."
+        )
+    }
+
+    fun syncDataToFirestore() {
+        val user = googleAuthManager.currentUser.value
+        if (user == null) {
+            _uiState.value = _uiState.value.copy(
+                userNotification = "Please Sign in with Google first to sync with Firebase Cloud!"
+            )
+            return
+        }
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isCloudSyncing = true)
+            val res = firestoreSyncRepository.syncUserProfile(user, subscriptionState.value)
+            _uiState.value = _uiState.value.copy(
+                isCloudSyncing = false,
+                lastCloudSyncTimestamp = System.currentTimeMillis(),
+                userNotification = if (res.isSuccess) "Data synced with Firebase Firestore!" else "Failed to sync: ${res.exceptionOrNull()?.localizedMessage}"
+            )
+        }
     }
 
     private fun loadCurrentPair() {

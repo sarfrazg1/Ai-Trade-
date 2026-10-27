@@ -81,6 +81,11 @@ fun SubscriptionScreen(
     subscriptionState: UserSubscriptionState,
     developerWhatsapp: String = "+923360074976",
     isRomanUrdu: Boolean = false,
+    googleUserEmail: String? = null,
+    isGoogleSignedIn: Boolean = false,
+    onSignInGoogle: () -> Unit = {},
+    onSignOutGoogle: () -> Unit = {},
+    onSyncCloud: () -> Unit = {},
     onApplyReferralCode: (String) -> Boolean,
     onRedeemCode: (String) -> Unit,
     onClose: () -> Unit,
@@ -289,6 +294,97 @@ fun SubscriptionScreen(
                 referralMessage?.let {
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(text = it, fontSize = 11.sp, color = BullGreen)
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(14.dp))
+
+        // Firebase Cloud Sync & Google Sign-In Card
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = CryptoSurface),
+            shape = RoundedCornerShape(12.dp),
+            border = androidx.compose.foundation.BorderStroke(1.dp, CryptoCardBorder)
+        ) {
+            Column(modifier = Modifier.padding(14.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(32.dp)
+                                .clip(CircleShape)
+                                .background(if (isGoogleSignedIn) BullGreen.copy(alpha = 0.2f) else AccentCyan.copy(alpha = 0.2f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Shield,
+                                contentDescription = "Firebase Cloud Sync",
+                                tint = if (isGoogleSignedIn) BullGreen else AccentCyan,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Column {
+                            Text(
+                                text = if (isRomanUrdu) "Firebase Cloud Sync" else "Firebase Cloud Backup",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = TextPrimary
+                            )
+                            Text(
+                                text = if (isGoogleSignedIn) (googleUserEmail ?: "Signed In") else (if (isRomanUrdu) "Apna data cloud per mehfooz karein" else "Save plans & trades to Cloud"),
+                                fontSize = 11.sp,
+                                color = if (isGoogleSignedIn) BullGreen else TextMuted
+                            )
+                        }
+                    }
+
+                    if (isGoogleSignedIn) {
+                        TextButton(onClick = onSignOutGoogle) {
+                            Text("Sign Out", fontSize = 11.sp, color = BearRed)
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                if (isGoogleSignedIn) {
+                    Button(
+                        onClick = onSyncCloud,
+                        colors = ButtonDefaults.buttonColors(containerColor = AccentCyan),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("sync_firestore_button")
+                    ) {
+                        Text(
+                            text = if (isRomanUrdu) "Firestore Cloud per Sync Karein" else "Sync to Firebase Firestore",
+                            color = Color.Black,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 12.sp
+                        )
+                    }
+                } else {
+                    Button(
+                        onClick = onSignInGoogle,
+                        colors = ButtonDefaults.buttonColors(containerColor = Color.White),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("google_sign_in_button")
+                    ) {
+                        Text(
+                            text = if (isRomanUrdu) "Google Account se Sign In Karein" else "Sign in with Google",
+                            color = Color.Black,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 12.sp
+                        )
+                    }
                 }
             }
         }
