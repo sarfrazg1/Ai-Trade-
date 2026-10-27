@@ -88,6 +88,7 @@ fun SubscriptionScreen(
     onSyncCloud: () -> Unit = {},
     onApplyReferralCode: (String) -> Boolean,
     onRedeemCode: (String) -> Unit,
+    onSubmitPaymentProof: (plan: String, paymentRef: String) -> Unit = { _, _ -> },
     onClose: () -> Unit,
     onOpenLegalPage: (String) -> Unit,
     onOpenAdminPortal: () -> Unit = {},
@@ -98,6 +99,7 @@ fun SubscriptionScreen(
     var referralInput by remember { mutableStateOf(subscriptionState.referralCode ?: "") }
     var referralMessage by remember { mutableStateOf<String?>(null) }
     var showRedeemDialog by remember { mutableStateOf(false) }
+    var showPaymentProofDialog by remember { mutableStateOf(false) }
     var showFallbackDialog by remember { mutableStateOf(false) }
     var lastPrefilledMessage by remember { mutableStateOf("") }
 
@@ -486,7 +488,31 @@ fun SubscriptionScreen(
 
         Spacer(modifier = Modifier.height(10.dp))
 
-        // Secondary Action: Enter Activation Code
+        // Secondary Action 1: Submit Payment Reference / Trx ID
+        OutlinedButton(
+            onClick = { showPaymentProofDialog = true },
+            shape = RoundedCornerShape(10.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(48.dp)
+                .testTag("submit_payment_trx_button"),
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = BullGreen),
+            border = androidx.compose.foundation.BorderStroke(1.dp, BullGreen)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(imageVector = Icons.Default.Bolt, contentDescription = "Submit Trx", tint = BullGreen)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = if (isRomanUrdu) "Payment Reference / Trx ID Darj Karein" else "Submit Payment Reference / Trx ID",
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        // Secondary Action 2: Enter Activation Code
         OutlinedButton(
             onClick = { showRedeemDialog = true },
             shape = RoundedCornerShape(10.dp),
@@ -640,6 +666,80 @@ fun SubscriptionScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showRedeemDialog = false }) {
+                    Text("Cancel", color = TextMuted)
+                }
+            }
+        )
+    }
+
+    // Payment Proof / Trx ID Submission Dialog
+    if (showPaymentProofDialog) {
+        var trxInput by remember { mutableStateOf("") }
+        var trxError by remember { mutableStateOf<String?>(null) }
+
+        AlertDialog(
+            onDismissRequest = { showPaymentProofDialog = false },
+            containerColor = CryptoSurface,
+            title = {
+                Text(
+                    text = if (isRomanUrdu) "Payment Reference / Trx ID" else "Submit Payment Reference",
+                    color = TextPrimary,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Column {
+                    Text(
+                        text = if (isRomanUrdu) {
+                            "Apna JazzCash, EasyPaisa ya Bank Transfer ka Transaction ID (Trx ID) darj karein. Yeh verification k liye administrator k database me submit ho jaye ga."
+                        } else {
+                            "Enter your JazzCash, EasyPaisa, or Bank Transfer Transaction Reference ID. This will be recorded in the cloud verification ledger for the selected plan (${selectedPlan.title})."
+                        },
+                        fontSize = 12.sp,
+                        color = TextSecondary
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    OutlinedTextField(
+                        value = trxInput,
+                        onValueChange = { trxInput = it },
+                        label = { Text("Trx ID / Bank Reference", fontSize = 11.sp) },
+                        placeholder = { Text("e.g. TID-94810294", fontSize = 11.sp) },
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = BullGreen,
+                            unfocusedBorderColor = CryptoCardBorder,
+                            focusedTextColor = TextPrimary,
+                            unfocusedTextColor = TextPrimary
+                        ),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("trx_input_field")
+                    )
+
+                    trxError?.let {
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(text = it, fontSize = 11.sp, color = BearRed)
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (trxInput.isBlank()) {
+                            trxError = "Please enter a transaction ID"
+                            return@Button
+                        }
+                        onSubmitPaymentProof(selectedPlan.id, trxInput.trim())
+                        showPaymentProofDialog = false
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = BullGreen),
+                    modifier = Modifier.testTag("confirm_trx_button")
+                ) {
+                    Text(if (isRomanUrdu) "Submit Karein" else "Submit Proof", color = Color.Black, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showPaymentProofDialog = false }) {
                     Text("Cancel", color = TextMuted)
                 }
             }

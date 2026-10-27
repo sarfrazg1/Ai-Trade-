@@ -338,6 +338,7 @@ fun SmartTradeApp(viewModel: TradingViewModel) {
                     onSyncCloud = { viewModel.syncDataToFirestore() },
                     onApplyReferralCode = { viewModel.applyReferralCode(it) },
                     onRedeemCode = { viewModel.redeemActivationCode(it) },
+                    onSubmitPaymentProof = { plan, trx -> viewModel.submitPaymentVerification(plan, trx) },
                     onClose = { viewModel.openSubscriptionModal(false) },
                     onOpenLegalPage = { viewModel.openLegalModal(it) },
                     onOpenAdminPortal = { viewModel.openAdminModal(true) }
@@ -346,6 +347,9 @@ fun SmartTradeApp(viewModel: TradingViewModel) {
                 BackHandler { viewModel.openAdminModal(false) }
                 com.example.ui.screens.AdminScreen(
                     subscriptionManager = viewModel.subscriptionManager,
+                    onPublishCodeCloud = { code, userRef, plan, days, paymentRef ->
+                        viewModel.adminPublishCodeToCloud(code, userRef, plan, days, paymentRef)
+                    },
                     onClose = { viewModel.openAdminModal(false) }
                 )
             } else if (uiState.showInfluencerModal) {

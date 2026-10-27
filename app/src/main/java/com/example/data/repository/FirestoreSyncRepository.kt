@@ -117,6 +117,8 @@ class FirestoreSyncRepository(
         userId: String,
         userReference: String,
         plan: String,
+        paymentReference: String = "",
+        influencerCode: String = "",
         code: String? = null
     ): Result<Unit> {
         return try {
@@ -127,15 +129,159 @@ class FirestoreSyncRepository(
                 "userId" to userId,
                 "userReferenceId" to userReference,
                 "plan" to plan,
-                "status" to "REQUESTED",
+                "paymentReference" to paymentReference,
+                "influencerCode" to influencerCode,
+                "status" to "PENDING_VERIFICATION",
                 "activationCode" to (code ?: ""),
                 "createdAt" to FieldValue.serverTimestamp()
             )
             docRef.set(data).await()
+            Log.d(TAG, "Recorded activation request $requestId")
             Result.success(Unit)
         } catch (e: Exception) {
             Log.e(TAG, "Failed to record activation request", e)
             Result.failure(e)
         }
+    }
+
+    fun observeActivationRequests(userId: String?): Flow<List<Map<String, Any>>> {
+        if (userId.isNullOrBlank()) return flowOf(emptyList())
+        return db.collection("activationRequests")
+            .whereEqualTo("userId", userId)
+            .snapshots()
+            .map { snapshot ->
+                snapshot.documents.mapNotNull { it.data }
+            }
+    }
+
+    suspend fun redeemActivationCodeCloud(
+        user: FirebaseUser,
+        code: String,
+        currentUserRef: String,
+        influencerCode: String?
+    ): Result<String> {
+        return try {
+            val cleanCode = code.trim().uppercase()
+            val codeDocRef = db.collection("activationCodes").document(cleanCode)
+            val codeSnap = codeDocRef.get().await()
+
+            if (!codeSnap.exists()) {
+                // If not found in cloud yet (e.g. offline-generated or direct HMAC), fallback gracefully
+                return Result.failure(IllegalArgumentException("Activation code not found in Cloud Registry. Please ensure the code is correct or wait for WhatsApp admin verification."))
+            }
+
+            val isRedeemed = codeSnap.getBoolean("isRedeemed") ?: false
+            if (isRedeemed) {
+                return Result.failure(IllegalStateException("This activation code has already been redeemed."))
+            }
+
+            val isRevoked = codeSnap.getBoolean("isRevoked") ?: false
+            if (isRevoked) {
+                return Result.failure(IllegalStateException("This activation code has been revoked by the administrator."))
+            }
+
+            val targetUserRef = codeSnap.getString("userReference") ?: ""
+            if (targetUserRef.isNotBlank() && !targetUserRef.equals(currentUserRef, ignoreCase = true)) {
+                return Result.failure(IllegalArgumentException("This activation code is bound to User Reference ($targetUserRef). It cannot be redeemed on your account."))
+            }
+
+            val planId = codeSnap.getString("plan") ?: "FREE"
+            val validityDays = codeSnap.getLong("validityDays")?.toInt() ?: 30
+            val now = System.currentTimeMillis()
+            val expiresAt = now + (validityDays.toLong() * 24 * 60 * 60 * 1000L)
+
+            // 1. Mark code redeemed atomically
+            codeDocRef.update(
+                mapOf(
+                    "isRedeemed" to true,
+                    "redeemedAt" to FieldValue.serverTimestamp(),
+                    "redeemedByUid" to user.uid,
+                    "redeemedByUserRef" to currentUserRef
+                )
+            ).await()
+
+            // 2. Update user profile in Firestore
+            val userDoc = db.collection("users").document(user.uid)
+            val profileUpdate = hashMapOf<String, Any>(
+                "subscriptionPlan" to planId,
+                "subscriptionStatus" to "ACTIVE",
+                "activatedAt" to now,
+                "expiresAt" to expiresAt,
+                "activationCode" to cleanCode,
+                "lastSyncedAt" to FieldValue.serverTimestamp()
+            )
+            userDoc.set(profileUpdate, SetOptions.merge()).await()
+
+            // 3. Record Influencer Commission if referral code is present
+            val effectiveReferral = influencerCode ?: codeSnap.getString("referralCode")
+            if (!effectiveReferral.isNullOrBlank()) {
+                val commissionPkr = when (planId) {
+                    "GOLD" -> 600
+                    "SILV" -> 400
+                    "BRNZ" -> 200
+                    else -> 0
+                }
+                if (commissionPkr > 0) {
+                    val commId = "COMM_${System.currentTimeMillis()}_${cleanCode.takeLast(4)}"
+                    val commDoc = db.collection("commissions").document(commId)
+                    commDoc.set(
+                        mapOf(
+                            "id" to commId,
+                            "influencerCode" to effectiveReferral.uppercase(),
+                            "userReference" to currentUserRef,
+                            "plan" to planId,
+                            "commissionAmountPkr" to commissionPkr,
+                            "status" to "HELD",
+                            "eligibleAt" to (now + (7L * 24 * 60 * 60 * 1000L)),
+                            "createdAt" to FieldValue.serverTimestamp()
+                        )
+                    ).await()
+                }
+            }
+
+            Result.success("Subscription activated successfully for plan $planId ($validityDays days)!")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error redeeming code in cloud", e)
+            Result.failure(e)
+        }
+    }
+
+    suspend fun adminIssueCodeCloud(
+        code: String,
+        targetUserRef: String,
+        plan: String,
+        validityDays: Int = 30,
+        paymentRef: String = "MANUAL_WHATSAPP",
+        referralCode: String = ""
+    ): Result<Unit> {
+        return try {
+            val docRef = db.collection("activationCodes").document(code.trim().uppercase())
+            val data = hashMapOf<String, Any>(
+                "code" to code.trim().uppercase(),
+                "userReference" to targetUserRef.trim().uppercase(),
+                "plan" to plan,
+                "validityDays" to validityDays,
+                "paymentReference" to paymentRef,
+                "referralCode" to referralCode.trim().uppercase(),
+                "isRedeemed" to false,
+                "isRevoked" to false,
+                "createdAt" to FieldValue.serverTimestamp()
+            )
+            docRef.set(data).await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e(TAG, "Admin failed to issue code in cloud", e)
+            Result.failure(e)
+        }
+    }
+
+    fun observeInfluencerCommissions(influencerCode: String): Flow<List<Map<String, Any>>> {
+        if (influencerCode.isBlank()) return flowOf(emptyList())
+        return db.collection("commissions")
+            .whereEqualTo("influencerCode", influencerCode.trim().uppercase())
+            .snapshots()
+            .map { snapshot ->
+                snapshot.documents.mapNotNull { it.data }
+            }
     }
 }

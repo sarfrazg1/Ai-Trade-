@@ -80,6 +80,7 @@ import java.util.Locale
 fun AdminScreen(
     subscriptionManager: SubscriptionManager,
     onClose: () -> Unit,
+    onPublishCodeCloud: (code: String, targetUserRef: String, plan: String, validityDays: Int, paymentRef: String) -> Unit = { _, _, _, _, _ -> },
     modifier: Modifier = Modifier
 ) {
     var isAuthenticated by remember { mutableStateOf(false) }
@@ -240,7 +241,7 @@ fun AdminScreen(
         }
 
         when (selectedTab) {
-            0 -> IssueCodeTab(subscriptionManager = subscriptionManager)
+            0 -> IssueCodeTab(subscriptionManager = subscriptionManager, onPublishCodeCloud = onPublishCodeCloud)
             1 -> InfluencerLedgerTab(commissions = commissions, subscriptionManager = subscriptionManager)
             2 -> IssuedCodesTab(subscriptionManager = subscriptionManager)
             3 -> AuditLogTab(auditLogs = auditLogs)
@@ -249,7 +250,10 @@ fun AdminScreen(
 }
 
 @Composable
-private fun IssueCodeTab(subscriptionManager: SubscriptionManager) {
+private fun IssueCodeTab(
+    subscriptionManager: SubscriptionManager,
+    onPublishCodeCloud: (code: String, targetUserRef: String, plan: String, validityDays: Int, paymentRef: String) -> Unit = { _, _, _, _, _ -> }
+) {
     val context = LocalContext.current
     var userRefInput by remember { mutableStateOf("") }
     var selectedPlan by remember { mutableStateOf(SubscriptionPlan.GOLDEN) }
@@ -364,14 +368,16 @@ private fun IssueCodeTab(subscriptionManager: SubscriptionManager) {
                                 return@Button
                             }
                             val days = validityDaysInput.toIntOrNull() ?: 30
+                            val paymentRef = paymentRefInput.ifBlank { "MANUAL_VERIFIED" }
                             val code = subscriptionManager.generateActivationCode(
                                 targetUserRef = userRefInput,
                                 plan = selectedPlan,
                                 validityDays = days,
-                                paymentRef = paymentRefInput.ifBlank { "MANUAL_VERIFIED" }
+                                paymentRef = paymentRef
                             )
                             generatedCode = code
-                            feedbackMessage = "Code successfully generated & saved to database!"
+                            onPublishCodeCloud(code, userRefInput, selectedPlan.id, days, paymentRef)
+                            feedbackMessage = "Code successfully generated & saved to Cloud Vault & Local Ledger!"
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = BullGreen),
                         shape = RoundedCornerShape(8.dp),

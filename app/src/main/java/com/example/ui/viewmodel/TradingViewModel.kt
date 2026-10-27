@@ -330,11 +330,97 @@ class TradingViewModel(application: Application) : AndroidViewModel(application)
     }
 
     fun redeemActivationCode(code: String) {
-        val result = subscriptionManager.redeemActivationCode(code)
-        result.onSuccess { message ->
-            _uiState.value = _uiState.value.copy(userNotification = message)
-        }.onFailure { err ->
-            _uiState.value = _uiState.value.copy(userNotification = err.localizedMessage ?: "Invalid code")
+        val user = googleAuthManager.currentUser.value
+        val userRef = subscriptionManager.getUserReference()
+        val referral = subscriptionState.value.referralCode
+
+        if (user != null) {
+            val nonNullUser = user
+            viewModelScope.launch {
+                _uiState.value = _uiState.value.copy(isLoading = true)
+                val cloudRes = firestoreSyncRepository.redeemActivationCodeCloud(
+                    user = nonNullUser,
+                    code = code,
+                    currentUserRef = userRef,
+                    influencerCode = referral
+                )
+                _uiState.value = _uiState.value.copy(isLoading = false)
+
+                if (cloudRes.isSuccess) {
+                    // Update local manager for instant UI state
+                    subscriptionManager.redeemActivationCode(code)
+                    _uiState.value = _uiState.value.copy(
+                        userNotification = cloudRes.getOrNull() ?: "Subscription activated in Firebase Cloud!"
+                    )
+                } else {
+                    // Fall back to local HMAC verification if offline or manually signed
+                    val localRes = subscriptionManager.redeemActivationCode(code)
+                    localRes.onSuccess { msg ->
+                        _uiState.value = _uiState.value.copy(userNotification = msg)
+                        firestoreSyncRepository.syncUserProfile(nonNullUser, subscriptionState.value)
+                    }.onFailure { err ->
+                        _uiState.value = _uiState.value.copy(
+                            userNotification = "Activation failed: ${err.localizedMessage ?: cloudRes.exceptionOrNull()?.localizedMessage}"
+                        )
+                    }
+                }
+            }
+        } else {
+            val result = subscriptionManager.redeemActivationCode(code)
+            result.onSuccess { message ->
+                _uiState.value = _uiState.value.copy(userNotification = message)
+            }.onFailure { err ->
+                _uiState.value = _uiState.value.copy(userNotification = err.localizedMessage ?: "Invalid code")
+            }
+        }
+    }
+
+    fun submitPaymentVerification(plan: String, paymentRef: String) {
+        val user = googleAuthManager.currentUser.value
+        val userRef = subscriptionManager.getUserReference()
+        val referral = subscriptionState.value.referralCode ?: ""
+
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true)
+            if (user != null) {
+                val res = firestoreSyncRepository.recordActivationRequest(
+                    userId = user.uid,
+                    userReference = userRef,
+                    plan = plan,
+                    paymentReference = paymentRef,
+                    influencerCode = referral
+                )
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    userNotification = if (res.isSuccess)
+                        "Payment reference recorded in Cloud! Send screenshot to WhatsApp (+923360074976) to receive activation code."
+                    else "Recorded locally. Please share screenshot on WhatsApp (+923360074976)."
+                )
+            } else {
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    userNotification = "Payment recorded! Please send reference $paymentRef on WhatsApp (+923360074976)."
+                )
+            }
+        }
+    }
+
+    fun adminPublishCodeToCloud(
+        code: String,
+        targetUserRef: String,
+        plan: String,
+        validityDays: Int = 30,
+        paymentRef: String = "MANUAL_VERIFIED"
+    ) {
+        viewModelScope.launch {
+            firestoreSyncRepository.adminIssueCodeCloud(
+                code = code,
+                targetUserRef = targetUserRef,
+                plan = plan,
+                validityDays = validityDays,
+                paymentRef = paymentRef,
+                referralCode = subscriptionState.value.referralCode ?: ""
+            )
         }
     }
 
@@ -343,8 +429,9 @@ class TradingViewModel(application: Application) : AndroidViewModel(application)
         _uiState.value = _uiState.value.copy(userNotification = "Terms & Disclaimer accepted.")
         val user = googleAuthManager.currentUser.value
         if (user != null) {
+            val nonNullUser = user
             viewModelScope.launch {
-                firestoreSyncRepository.syncUserProfile(user, subscriptionState.value)
+                firestoreSyncRepository.syncUserProfile(nonNullUser, subscriptionState.value)
             }
         }
     }
@@ -382,9 +469,10 @@ class TradingViewModel(application: Application) : AndroidViewModel(application)
             )
             return
         }
+        val nonNullUser = user
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isCloudSyncing = true)
-            val res = firestoreSyncRepository.syncUserProfile(user, subscriptionState.value)
+            val res = firestoreSyncRepository.syncUserProfile(nonNullUser, subscriptionState.value)
             _uiState.value = _uiState.value.copy(
                 isCloudSyncing = false,
                 lastCloudSyncTimestamp = System.currentTimeMillis(),
