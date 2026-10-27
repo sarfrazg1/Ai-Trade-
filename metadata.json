@@ -1,0 +1,6 @@
+{
+  "name": "Smart Trade AI",
+  "description": "Personal AI crypto futures trading signal and confluence analysis app with live Binance public market data, SMC, Fibonacci, and multi-timeframe planning.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
