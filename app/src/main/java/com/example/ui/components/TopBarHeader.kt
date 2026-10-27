@@ -77,7 +77,8 @@ fun TopBarHeader(
     onSymbolSelected: (String) -> Unit,
     onTimeframeSelected: (Timeframe) -> Unit,
     onRefresh: () -> Unit,
-    onAddWatchlist: (String) -> Unit
+    onAddWatchlist: (String) -> Unit,
+    isChartTab: Boolean = false
 ) {
     var showPairDialog by remember { mutableStateOf(false) }
     var customSymbolInput by remember { mutableStateOf("") }
@@ -86,298 +87,467 @@ fun TopBarHeader(
         color = CryptoSurface,
         modifier = Modifier.fillMaxWidth()
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 14.dp, vertical = 10.dp)
-        ) {
-            // Row 1: App Brand, Dev Badge, Subscription Badge, Language Toggle, Status, Refresh
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+        if (isChartTab) {
+            // ULTRA COMPACT 2-ROW HEADER DEDICATED FOR CANDLESTICK CHART TAB
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 10.dp, vertical = 4.dp)
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        modifier = Modifier
-                            .size(10.dp)
-                            .clip(CircleShape)
-                            .background(
-                                when {
-                                    isLoading -> WarningAmber
-                                    errorMessage != null -> BearRed
-                                    stats?.isFallback == true -> AccentCyan
-                                    else -> BullGreen
-                                }
-                            )
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = "Smart Trade AI",
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = TextPrimary
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    // Subscription Plan Badge (Clickable)
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(4.dp))
-                            .background(
-                                if (isSubscribed) BullGreen.copy(alpha = 0.2f)
-                                else WarningAmber.copy(alpha = 0.2f)
-                            )
-                            .clickable { onSubscriptionClick() }
-                            .padding(horizontal = 5.dp, vertical = 2.dp)
-                    ) {
-                        Text(
-                            text = if (isSubscribed) "★ ${subscriptionPlan.id}" else "UPGRADE",
-                            fontSize = 9.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = if (isSubscribed) BullGreen else WarningAmber
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(4.dp))
-                            .background(BullGreen.copy(alpha = 0.15f))
-                            .clickable { onDeveloperClick() }
-                            .padding(horizontal = 5.dp, vertical = 2.dp)
-                    ) {
-                        Text(
-                            text = "Dev: Rao Sarfraz",
-                            fontSize = 9.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = BullGreen
-                        )
-                    }
-                }
-
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    // Language Switcher Toggle Pill
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(CryptoSurfaceVariant)
-                            .clickable { onToggleLanguage() }
-                            .padding(horizontal = 6.dp, vertical = 3.dp)
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                text = "ENG",
-                                fontSize = 10.sp,
-                                fontWeight = if (!isRomanUrdu) FontWeight.ExtraBold else FontWeight.Normal,
-                                color = if (!isRomanUrdu) AccentCyan else TextMuted
-                            )
-                            Text(
-                                text = " | ",
-                                fontSize = 10.sp,
-                                color = TextMuted
-                            )
-                            Text(
-                                text = "اردو",
-                                fontSize = 10.sp,
-                                fontWeight = if (isRomanUrdu) FontWeight.ExtraBold else FontWeight.Normal,
-                                color = if (isRomanUrdu) BullGreen else TextMuted
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.width(6.dp))
-
-                    val timeStr = stats?.let {
-                        SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date(it.lastUpdated))
-                    } ?: "Offline"
-
-                    Text(
-                        text = timeStr,
-                        fontSize = 11.sp,
-                        color = TextMuted
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    IconButton(
-                        onClick = onRefresh,
-                        enabled = !isLoading,
-                        modifier = Modifier
-                            .size(36.dp)
-                            .testTag("refresh_button")
-                    ) {
-                        if (isLoading) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(18.dp),
-                                color = BullGreen,
-                                strokeWidth = 2.dp
-                            )
-                        } else {
-                            Icon(
-                                imageVector = Icons.Default.Refresh,
-                                contentDescription = "Refresh market data",
-                                tint = TextSecondary,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Row 2: Selected Pair Selector & Live Price
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Pair Selector Button
+                // Row 1: Brand + Pair Selector + Live Price + Lang + Refresh
                 Row(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(CryptoSurfaceVariant)
-                        .clickable { showPairDialog = true }
-                        .padding(horizontal = 10.dp, vertical = 6.dp)
-                        .testTag("pair_selector_button"),
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = symbol,
-                        fontSize = 17.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = TextPrimary
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Icon(
-                        imageVector = Icons.Default.KeyboardArrowDown,
-                        contentDescription = "Select trading pair",
-                        tint = TextSecondary,
-                        modifier = Modifier.size(18.dp)
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(8.dp)
+                                .clip(CircleShape)
+                                .background(
+                                    when {
+                                        isLoading -> WarningAmber
+                                        errorMessage != null -> BearRed
+                                        stats?.isFallback == true -> AccentCyan
+                                        else -> BullGreen
+                                    }
+                                )
+                        )
+                        Spacer(modifier = Modifier.width(5.dp))
+                        // Pair Selector Chip
+                        Row(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(CryptoSurfaceVariant)
+                                .clickable { showPairDialog = true }
+                                .padding(horizontal = 7.dp, vertical = 4.dp)
+                                .testTag("pair_selector_button"),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = symbol,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = TextPrimary
+                            )
+                            Spacer(modifier = Modifier.width(3.dp))
+                            Icon(
+                                imageVector = Icons.Default.KeyboardArrowDown,
+                                contentDescription = "Select trading pair",
+                                tint = AccentCyan,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    }
+
+                    // Center/Right: Live Price + 24h Change
+                    if (stats != null) {
+                        val isPositive = stats.priceChange24h >= 0
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = formatPrice(stats.lastPrice),
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = TextPrimary
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            val changeSign = if (isPositive) "+" else ""
+                            Text(
+                                text = "$changeSign${String.format("%.2f", stats.priceChange24h)}%",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (isPositive) BullGreen else BearRed,
+                                modifier = Modifier
+                                    .background(
+                                        if (isPositive) BullGreen.copy(alpha = 0.15f) else BearRed.copy(alpha = 0.15f),
+                                        RoundedCornerShape(4.dp)
+                                    )
+                                    .padding(horizontal = 5.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
+
+                    // Far Right: Lang + Refresh
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(CryptoSurfaceVariant)
+                                .clickable { onToggleLanguage() }
+                                .padding(horizontal = 6.dp, vertical = 3.dp)
+                        ) {
+                            Text(
+                                text = if (isRomanUrdu) "اردو" else "ENG",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (isRomanUrdu) BullGreen else AccentCyan
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(4.dp))
+                        IconButton(
+                            onClick = onRefresh,
+                            enabled = !isLoading,
+                            modifier = Modifier
+                                .size(30.dp)
+                                .testTag("refresh_button")
+                        ) {
+                            if (isLoading) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(14.dp),
+                                    color = BullGreen,
+                                    strokeWidth = 2.dp
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Default.Refresh,
+                                    contentDescription = "Refresh market data",
+                                    tint = TextSecondary,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
+                    }
                 }
 
-                // Live Price and 24h Change
-                if (stats != null) {
-                    val isPositive = stats.priceChange24h >= 0
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = formatPrice(stats.lastPrice),
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = TextPrimary
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        val changeSign = if (isPositive) "+" else ""
-                        Text(
-                            text = "$changeSign${String.format("%.2f", stats.priceChange24h)}%",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = if (isPositive) BullGreen else BearRed,
-                            modifier = Modifier
-                                .background(
-                                    if (isPositive) BullGreen.copy(alpha = 0.15f) else BearRed.copy(alpha = 0.15f),
-                                    RoundedCornerShape(4.dp)
+                Spacer(modifier = Modifier.height(4.dp))
+
+                // Row 2: Timeframe selector pills + Watchlist horizontal scroll in a single compact strip!
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Timeframe pills
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(3.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Timeframe.entries.forEach { tf ->
+                            val isSelected = tf == timeframe
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(5.dp))
+                                    .background(if (isSelected) BullGreen else CryptoSurfaceVariant)
+                                    .clickable { onTimeframeSelected(tf) }
+                                    .padding(horizontal = 6.dp, vertical = 3.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = tf.label,
+                                    fontSize = 11.sp,
+                                    fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Medium,
+                                    color = if (isSelected) Color.Black else TextSecondary
                                 )
-                                .padding(horizontal = 6.dp, vertical = 3.dp)
-                        )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Box(
+                        modifier = Modifier
+                            .width(1.dp)
+                            .height(16.dp)
+                            .background(CryptoCardBorder)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+
+                    // Quick Watchlist pills
+                    LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        items(watchlist) { item ->
+                            val isSelected = item.symbol.equals(symbol, ignoreCase = true)
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(5.dp))
+                                    .background(if (isSelected) BullGreen.copy(alpha = 0.25f) else CryptoSurfaceVariant)
+                                    .clickable { onSymbolSelected(item.symbol) }
+                                    .padding(horizontal = 6.dp, vertical = 3.dp)
+                            ) {
+                                Text(
+                                    text = item.symbol.replace("USDT", ""),
+                                    fontSize = 10.sp,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                    color = if (isSelected) BullGreen else TextSecondary
+                                )
+                            }
+                        }
+
+                        item {
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(5.dp))
+                                    .background(CryptoSurfaceVariant)
+                                    .clickable { showPairDialog = true }
+                                    .padding(horizontal = 6.dp, vertical = 3.dp)
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        imageVector = Icons.Default.Add,
+                                        contentDescription = "Add pair",
+                                        tint = AccentCyan,
+                                        modifier = Modifier.size(11.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(2.dp))
+                                    Text(text = "Add", fontSize = 10.sp, color = AccentCyan)
+                                }
+                            }
+                        }
                     }
                 }
             }
-
-            Spacer(modifier = Modifier.height(10.dp))
-
-            // Row 3: Watchlist quick-pills
-            LazyRow(
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth()
+        } else {
+            // STREAMLINED COMPACT HEADER FOR OTHER TABS (Signal, Indicators, Futures, Trades, Guide)
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 6.dp)
             ) {
-                items(watchlist) { item ->
-                    val isSelected = item.symbol.equals(symbol, ignoreCase = true)
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(6.dp))
-                            .background(if (isSelected) BullGreen.copy(alpha = 0.2f) else CryptoSurfaceVariant)
-                            .clickable { onSymbolSelected(item.symbol) }
-                            .padding(horizontal = 8.dp, vertical = 4.dp)
-                    ) {
-                        Text(
-                            text = item.symbol.replace("USDT", ""),
-                            fontSize = 12.sp,
-                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                            color = if (isSelected) BullGreen else TextSecondary
+                // Row 1: App Brand, Dev Badge, Subscription Badge, Language Toggle, Status, Refresh
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(9.dp)
+                                .clip(CircleShape)
+                                .background(
+                                    when {
+                                        isLoading -> WarningAmber
+                                        errorMessage != null -> BearRed
+                                        stats?.isFallback == true -> AccentCyan
+                                        else -> BullGreen
+                                    }
+                                )
                         )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "Smart Trade AI",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = TextPrimary
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        // Subscription Plan Badge (Clickable)
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(
+                                    if (isSubscribed) BullGreen.copy(alpha = 0.2f)
+                                    else WarningAmber.copy(alpha = 0.2f)
+                                )
+                                .clickable { onSubscriptionClick() }
+                                .padding(horizontal = 5.dp, vertical = 2.dp)
+                        ) {
+                            Text(
+                                text = if (isSubscribed) "★ ${subscriptionPlan.id}" else "UPGRADE",
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (isSubscribed) BullGreen else WarningAmber
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(BullGreen.copy(alpha = 0.15f))
+                                .clickable { onDeveloperClick() }
+                                .padding(horizontal = 5.dp, vertical = 2.dp)
+                        ) {
+                            Text(
+                                text = "Dev: Rao Sarfraz",
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = BullGreen
+                            )
+                        }
+                    }
+
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(CryptoSurfaceVariant)
+                                .clickable { onToggleLanguage() }
+                                .padding(horizontal = 6.dp, vertical = 3.dp)
+                        ) {
+                            Text(
+                                text = if (isRomanUrdu) "اردو" else "ENG",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (isRomanUrdu) BullGreen else AccentCyan
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.width(4.dp))
+
+                        IconButton(
+                            onClick = onRefresh,
+                            enabled = !isLoading,
+                            modifier = Modifier
+                                .size(32.dp)
+                                .testTag("refresh_button")
+                        ) {
+                            if (isLoading) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(16.dp),
+                                    color = BullGreen,
+                                    strokeWidth = 2.dp
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Default.Refresh,
+                                    contentDescription = "Refresh market data",
+                                    tint = TextSecondary,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
                     }
                 }
 
-                item {
-                    Box(
+                Spacer(modifier = Modifier.height(4.dp))
+
+                // Row 2: Selected Pair Selector & Live Price
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Pair Selector Button
+                    Row(
                         modifier = Modifier
                             .clip(RoundedCornerShape(6.dp))
                             .background(CryptoSurfaceVariant)
                             .clickable { showPairDialog = true }
                             .padding(horizontal = 8.dp, vertical = 4.dp)
+                            .testTag("pair_selector_button"),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
+                        Text(
+                            text = symbol,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = TextPrimary
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Icon(
+                            imageVector = Icons.Default.KeyboardArrowDown,
+                            contentDescription = "Select trading pair",
+                            tint = TextSecondary,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+
+                    // Live Price and 24h Change
+                    if (stats != null) {
+                        val isPositive = stats.priceChange24h >= 0
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = Icons.Default.Add,
-                                contentDescription = "Add pair",
-                                tint = AccentCyan,
-                                modifier = Modifier.size(12.dp)
+                            Text(
+                                text = formatPrice(stats.lastPrice),
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = TextPrimary
                             )
-                            Spacer(modifier = Modifier.width(2.dp))
-                            Text(text = "Add", fontSize = 11.sp, color = AccentCyan)
+                            Spacer(modifier = Modifier.width(6.dp))
+                            val changeSign = if (isPositive) "+" else ""
+                            Text(
+                                text = "$changeSign${String.format("%.2f", stats.priceChange24h)}%",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (isPositive) BullGreen else BearRed,
+                                modifier = Modifier
+                                    .background(
+                                        if (isPositive) BullGreen.copy(alpha = 0.15f) else BearRed.copy(alpha = 0.15f),
+                                        RoundedCornerShape(4.dp)
+                                    )
+                                    .padding(horizontal = 5.dp, vertical = 2.dp)
+                            )
                         }
                     }
                 }
-            }
 
-            Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(4.dp))
 
-            // Row 4: Timeframe selection buttons (5m, 15m, 1h, 4h, 1d)
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Timeframe.entries.forEach { tf ->
-                    val isSelected = tf == timeframe
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .padding(horizontal = 2.dp)
-                            .clip(RoundedCornerShape(6.dp))
-                            .background(if (isSelected) BullGreen else CryptoSurfaceVariant)
-                            .clickable { onTimeframeSelected(tf) }
-                            .padding(vertical = 5.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = tf.label,
-                            fontSize = 12.sp,
-                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                            color = if (isSelected) Color.Black else TextSecondary
-                        )
-                    }
-                }
-            }
-
-            // Connection source info banner
-            if (stats != null) {
-                Spacer(modifier = Modifier.height(6.dp))
+                // Row 3: Timeframe buttons and Watchlist unified
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = "Source: ${stats.source}",
-                        fontSize = 10.sp,
-                        color = TextMuted
-                    )
-                    if (stats.fundingRate != 0.0) {
-                        val fundingPct = stats.fundingRate * 100.0
-                        Text(
-                            text = "Funding (8h): ${String.format("%.4f", fundingPct)}%",
-                            fontSize = 10.sp,
-                            color = if (fundingPct < 0) BullGreen else TextSecondary
-                        )
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(3.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Timeframe.entries.forEach { tf ->
+                            val isSelected = tf == timeframe
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(5.dp))
+                                    .background(if (isSelected) BullGreen else CryptoSurfaceVariant)
+                                    .clickable { onTimeframeSelected(tf) }
+                                    .padding(horizontal = 6.dp, vertical = 3.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = tf.label,
+                                    fontSize = 11.sp,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                    color = if (isSelected) Color.Black else TextSecondary
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.width(6.dp))
+
+                    LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        items(watchlist) { item ->
+                            val isSelected = item.symbol.equals(symbol, ignoreCase = true)
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(5.dp))
+                                    .background(if (isSelected) BullGreen.copy(alpha = 0.2f) else CryptoSurfaceVariant)
+                                    .clickable { onSymbolSelected(item.symbol) }
+                                    .padding(horizontal = 6.dp, vertical = 3.dp)
+                            ) {
+                                Text(
+                                    text = item.symbol.replace("USDT", ""),
+                                    fontSize = 10.sp,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                    color = if (isSelected) BullGreen else TextSecondary
+                                )
+                            }
+                        }
+
+                        item {
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(5.dp))
+                                    .background(CryptoSurfaceVariant)
+                                    .clickable { showPairDialog = true }
+                                    .padding(horizontal = 6.dp, vertical = 3.dp)
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        imageVector = Icons.Default.Add,
+                                        contentDescription = "Add pair",
+                                        tint = AccentCyan,
+                                        modifier = Modifier.size(11.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(2.dp))
+                                    Text(text = "Add", fontSize = 10.sp, color = AccentCyan)
+                                }
+                            }
+                        }
                     }
                 }
             }

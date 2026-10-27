@@ -1,13 +1,16 @@
 package com.example.ui.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -20,11 +23,11 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -36,6 +39,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
@@ -102,6 +106,8 @@ fun CandlestickChart(
     modifier: Modifier = Modifier
 ) {
     var selectedCandleIndex by remember { mutableStateOf<Int?>(null) }
+    var candleCount by remember { mutableStateOf(28) }
+    var isTradeBarExpanded by remember { mutableStateOf(false) }
     val textMeasurer = rememberTextMeasurer()
 
     val currentActiveTrade = activeTrades.firstOrNull { it.status == "OPEN" }
@@ -111,59 +117,58 @@ fun CandlestickChart(
             .fillMaxSize()
             .background(CryptoBackground)
     ) {
-        // Overlay Toggle FilterChips
+        // Ultra-compact sleek overlay controls & candle density toolbar
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .horizontalScroll(rememberScrollState())
-                .padding(horizontal = 12.dp, vertical = 6.dp),
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                .padding(horizontal = 8.dp, vertical = 2.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            OverlayChip(label = "EMA (20/50/200)", selected = showEma) { onToggleOverlay("EMA") }
+            // Overlay indicator toggle chips (compact 24dp)
+            OverlayChip(label = "EMA (20/50)", selected = showEma) { onToggleOverlay("EMA") }
             OverlayChip(label = "Bollinger (20,2)", selected = showBollinger) { onToggleOverlay("BOLLINGER") }
-            OverlayChip(label = "Fibonacci Golden", selected = showFibonacci) { onToggleOverlay("FIBONACCI") }
+            OverlayChip(label = "Fibonacci", selected = showFibonacci) { onToggleOverlay("FIBONACCI") }
             OverlayChip(label = "Order Blocks", selected = showOrderBlocks) { onToggleOverlay("ORDER_BLOCKS") }
-            OverlayChip(label = "FVG Imbalance", selected = showFvg) { onToggleOverlay("FVG") }
+            OverlayChip(label = "FVG", selected = showFvg) { onToggleOverlay("FVG") }
             OverlayChip(label = "BOS / CHoCH", selected = showBos) { onToggleOverlay("BOS") }
-        }
 
-        // Selected candle info HUD
-        val displayCandle = selectedCandleIndex?.let { candles.getOrNull(it) } ?: candles.lastOrNull()
-        if (displayCandle != null) {
-            val dateStr = SimpleDateFormat("MM-dd HH:mm", Locale.getDefault()).format(Date(displayCandle.time))
-            Surface(
-                color = CryptoSurface,
+            Spacer(modifier = Modifier.width(3.dp))
+            Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 2.dp),
-                shape = RoundedCornerShape(6.dp)
-            ) {
-                Row(
+                    .width(1.dp)
+                    .height(14.dp)
+                    .background(CryptoCardBorder)
+            )
+            Spacer(modifier = Modifier.width(3.dp))
+
+            // Candle Density / Zoom Selector (20C, 28C, 40C)
+            listOf(20, 28, 40).forEach { count ->
+                val isSel = candleCount == count
+                Box(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 8.dp, vertical = 4.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(if (isSel) BullGreen.copy(alpha = 0.25f) else CryptoSurfaceVariant)
+                        .clickable { candleCount = count }
+                        .padding(horizontal = 6.dp, vertical = 2.dp)
                 ) {
-                    Text(text = dateStr, fontSize = 11.sp, color = TextMuted)
-                    Text(text = "O: ${formatShortPrice(displayCandle.open)}", fontSize = 11.sp, color = TextSecondary)
-                    Text(text = "H: ${formatShortPrice(displayCandle.high)}", fontSize = 11.sp, color = BullGreen)
-                    Text(text = "L: ${formatShortPrice(displayCandle.low)}", fontSize = 11.sp, color = BearRed)
                     Text(
-                        text = "C: ${formatShortPrice(displayCandle.close)}",
-                        fontSize = 11.sp,
-                        color = if (displayCandle.isBullish) BullGreen else BearRed
+                        text = "${count}C",
+                        fontSize = 10.sp,
+                        fontWeight = if (isSel) FontWeight.Bold else FontWeight.Normal,
+                        color = if (isSel) BullGreen else TextSecondary
                     )
                 }
             }
         }
 
-        // Main Chart Canvas
+        // Main Chart Canvas with Floating HUD inside Box (0dp layout displacement)
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
-                .padding(horizontal = 8.dp, vertical = 2.dp)
+                .padding(horizontal = 4.dp, vertical = 1.dp)
         ) {
             if (candles.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -173,18 +178,21 @@ fun CandlestickChart(
                     )
                 }
             } else {
-                // Display latest 40 candles for clean mobile view
-                val visibleCandles = candles.takeLast(40.coerceAtMost(candles.size))
+                val visibleCandles = candles.takeLast(candleCount.coerceAtMost(candles.size))
                 var minPrice = visibleCandles.minOf { it.low }
                 var maxPrice = visibleCandles.maxOf { it.high }
 
-                // Include active trade levels in viewable chart scale if near
+                if (currentLivePrice > 0) {
+                    minPrice = minOf(minPrice, currentLivePrice)
+                    maxPrice = maxOf(maxPrice, currentLivePrice)
+                }
+
                 if (currentActiveTrade != null) {
                     minPrice = minOf(minPrice, currentActiveTrade.stopLoss, currentActiveTrade.entryPrice)
                     maxPrice = maxOf(maxPrice, currentActiveTrade.tp1, currentActiveTrade.entryPrice)
                 }
 
-                val pricePadding = (maxPrice - minPrice) * 0.08
+                val pricePadding = (maxPrice - minPrice) * 0.10
                 val chartMin = (minPrice - pricePadding).coerceAtLeast(0.0)
                 val chartMax = maxPrice + pricePadding
                 val priceRange = if (chartMax > chartMin) chartMax - chartMin else 1.0
@@ -194,18 +202,17 @@ fun CandlestickChart(
                         .fillMaxSize()
                         .pointerInput(visibleCandles) {
                             detectTapGestures { offset ->
-                                val candleWidth = size.width / visibleCandles.size
-                                val index = (offset.x / candleWidth).toInt().coerceIn(0, visibleCandles.size - 1)
+                                val slotW = size.width / visibleCandles.size
+                                val index = (offset.x / slotW).toInt().coerceIn(0, visibleCandles.size - 1)
                                 val originalIndex = candles.size - visibleCandles.size + index
-                                selectedCandleIndex = originalIndex
+                                selectedCandleIndex = if (selectedCandleIndex == originalIndex) null else originalIndex
                             }
                         }
                 ) {
                     val canvasWidth = size.width
                     val canvasHeight = size.height
-                    val candleCount = visibleCandles.size
-                    val slotWidth = canvasWidth / candleCount
-                    val candleBodyWidth = (slotWidth * 0.7f).coerceIn(3f, 22f)
+                    val slotWidth = canvasWidth / visibleCandles.size
+                    val candleBodyWidth = (slotWidth * 0.72f).coerceIn(4f, 24f)
 
                     // 1. Draw Grid Lines and Price Axis
                     drawChartGrid(
@@ -230,7 +237,21 @@ fun CandlestickChart(
                         drawFvgZones(smc, visibleCandles, candles.size, slotWidth, chartMin, chartMax, canvasHeight, canvasWidth)
                     }
 
-                    // 4. Draw Candlesticks
+                    // 4. Draw Volume Bars at bottom 14% of canvas
+                    val maxVol = visibleCandles.maxOfOrNull { it.volume }?.coerceAtLeast(1.0) ?: 1.0
+                    val volMaxH = canvasHeight * 0.14f
+                    for (i in visibleCandles.indices) {
+                        val c = visibleCandles[i]
+                        val x = i * slotWidth + slotWidth / 2f
+                        val vH = (c.volume / maxVol * volMaxH).toFloat().coerceIn(2f, volMaxH)
+                        drawRect(
+                            color = (if (c.isBullish) BullGreen else BearRed).copy(alpha = 0.20f),
+                            topLeft = Offset(x - candleBodyWidth / 2f, canvasHeight - vH),
+                            size = Size(candleBodyWidth, vH)
+                        )
+                    }
+
+                    // 5. Draw Candlesticks with prominent bodies and crisp wicks
                     for (i in visibleCandles.indices) {
                         val c = visibleCandles[i]
                         val x = i * slotWidth + slotWidth / 2f
@@ -240,19 +261,19 @@ fun CandlestickChart(
                         val yOpen = (canvasHeight * (1.0 - (c.open - chartMin) / priceRange)).toFloat()
                         val yClose = (canvasHeight * (1.0 - (c.close - chartMin) / priceRange)).toFloat()
 
-                        val candleColor = if (c.isBullish) CandleGreen else CandleRed
+                        val candleColor = if (c.isBullish) BullGreen else BearRed
 
-                        // Draw Wick
+                        // Draw Wick (2.0f stroke)
                         drawLine(
                             color = candleColor,
                             start = Offset(x, yHigh),
                             end = Offset(x, yLow),
-                            strokeWidth = 1.5f
+                            strokeWidth = 2.0f
                         )
 
                         // Draw Body
                         val bodyTop = minOf(yOpen, yClose)
-                        val bodyHeight = maxOf(kotlin.math.abs(yClose - yOpen), 2f)
+                        val bodyHeight = maxOf(kotlin.math.abs(yClose - yOpen), 2.5f)
 
                         drawRect(
                             color = candleColor,
@@ -262,7 +283,34 @@ fun CandlestickChart(
                         )
                     }
 
-                    // 5. Draw Technical Indicator Overlays: EMAs & Bollinger Bands
+                    // 6. Crosshair if candle selected
+                    selectedCandleIndex?.let { selIdx ->
+                        val visibleIdx = selIdx - (candles.size - visibleCandles.size)
+                        if (visibleIdx in visibleCandles.indices) {
+                            val selC = visibleCandles[visibleIdx]
+                            val xCross = visibleIdx * slotWidth + slotWidth / 2f
+                            val yCross = (canvasHeight * (1.0 - (selC.close - chartMin) / priceRange)).toFloat()
+
+                            // Vertical crosshair
+                            drawLine(
+                                color = TextMuted.copy(alpha = 0.6f),
+                                start = Offset(xCross, 0f),
+                                end = Offset(xCross, canvasHeight),
+                                strokeWidth = 1.0f,
+                                pathEffect = PathEffect.dashPathEffect(floatArrayOf(4f, 4f))
+                            )
+                            // Horizontal crosshair
+                            drawLine(
+                                color = TextMuted.copy(alpha = 0.6f),
+                                start = Offset(0f, yCross),
+                                end = Offset(canvasWidth, yCross),
+                                strokeWidth = 1.0f,
+                                pathEffect = PathEffect.dashPathEffect(floatArrayOf(4f, 4f))
+                            )
+                        }
+                    }
+
+                    // 7. Draw Technical Indicator Overlays: EMAs & Bollinger Bands
                     if (showEma) {
                         drawEmaLine(candles, visibleCandles, 20, chartMin, priceRange, slotWidth, canvasHeight, AccentCyan)
                         drawEmaLine(candles, visibleCandles, 50, chartMin, priceRange, slotWidth, canvasHeight, WarningAmber)
@@ -272,12 +320,39 @@ fun CandlestickChart(
                         drawBollingerOverlay(candles, visibleCandles, chartMin, priceRange, slotWidth, canvasHeight)
                     }
 
-                    // 6. Draw BOS / CHoCH Lines
+                    // 8. Draw BOS / CHoCH Lines
                     if (showBos) {
                         drawBosLines(smc, visibleCandles, candles.size, slotWidth, chartMin, priceRange, canvasHeight, textMeasurer)
                     }
 
-                    // 7. Interactive Paper Trade Lines (Gate.io / Binance Futures Style)
+                    // 9. Live Price Line (Cyan dashed with badge on right)
+                    if (currentLivePrice in chartMin..chartMax) {
+                        val yLive = (canvasHeight * (1.0 - (currentLivePrice - chartMin) / priceRange)).toFloat()
+                        drawLine(
+                            color = AccentCyan,
+                            start = Offset(0f, yLive),
+                            end = Offset(canvasWidth, yLive),
+                            strokeWidth = 1.5f,
+                            pathEffect = PathEffect.dashPathEffect(floatArrayOf(6f, 4f))
+                        )
+                        val liveText = formatShortPrice(currentLivePrice)
+                        val liveLayout = textMeasurer.measure(
+                            text = liveText,
+                            style = TextStyle(fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+                        )
+                        drawRoundRect(
+                            color = AccentCyan,
+                            topLeft = Offset(canvasWidth - liveLayout.size.width - 14f, yLive - liveLayout.size.height / 2f - 2f),
+                            size = Size(liveLayout.size.width + 12f, liveLayout.size.height + 4f),
+                            cornerRadius = androidx.compose.ui.geometry.CornerRadius(4f, 4f)
+                        )
+                        drawText(
+                            textLayoutResult = liveLayout,
+                            topLeft = Offset(canvasWidth - liveLayout.size.width - 8f, yLive - liveLayout.size.height / 2f)
+                        )
+                    }
+
+                    // 10. Interactive Paper Trade Lines
                     if (currentActiveTrade != null) {
                         drawPaperTradeChartOverlay(
                             trade = currentActiveTrade,
@@ -291,6 +366,41 @@ fun CandlestickChart(
                         )
                     }
                 }
+
+                // Floating Candle HUD Overlay (zero vertical layout cost)
+                val displayCandle = selectedCandleIndex?.let { candles.getOrNull(it) } ?: visibleCandles.lastOrNull()
+                if (displayCandle != null) {
+                    val dateStr = SimpleDateFormat("MM-dd HH:mm", Locale.getDefault()).format(Date(displayCandle.time))
+                    val diff = displayCandle.close - displayCandle.open
+                    val pct = if (displayCandle.open > 0) (diff / displayCandle.open) * 100.0 else 0.0
+                    val isBull = displayCandle.isBullish
+
+                    Surface(
+                        color = CryptoSurface.copy(alpha = 0.88f),
+                        shape = RoundedCornerShape(6.dp),
+                        border = androidx.compose.foundation.BorderStroke(0.6.dp, CryptoCardBorder),
+                        modifier = Modifier
+                            .align(Alignment.TopStart)
+                            .padding(start = 6.dp, top = 4.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(text = dateStr, fontSize = 10.sp, color = TextMuted)
+                            Text(text = "O: ${formatShortPrice(displayCandle.open)}", fontSize = 10.sp, color = TextSecondary)
+                            Text(text = "H: ${formatShortPrice(displayCandle.high)}", fontSize = 10.sp, color = BullGreen)
+                            Text(text = "L: ${formatShortPrice(displayCandle.low)}", fontSize = 10.sp, color = BearRed)
+                            Text(
+                                text = "C: ${formatShortPrice(displayCandle.close)} (${if (diff >= 0) "+" else ""}${String.format("%.2f", pct)}%)",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (isBull) BullGreen else BearRed
+                            )
+                        }
+                    }
+                }
             }
         }
 
@@ -298,14 +408,16 @@ fun CandlestickChart(
         if (currentActiveTrade != null) {
             ActivePositionBar(
                 trade = currentActiveTrade,
-                currentPrice = if (currentLivePrice > 0) currentLivePrice else displayCandle?.close ?: currentActiveTrade.entryPrice,
+                currentPrice = if (currentLivePrice > 0) currentLivePrice else candles.lastOrNull()?.close ?: currentActiveTrade.entryPrice,
                 isRomanUrdu = isRomanUrdu,
                 onCloseTrade = { onCloseTrade(currentActiveTrade) }
             )
         } else {
             InstantTradeActionBar(
-                currentPrice = if (currentLivePrice > 0) currentLivePrice else displayCandle?.close ?: 0.0,
+                currentPrice = if (currentLivePrice > 0) currentLivePrice else candles.lastOrNull()?.close ?: 0.0,
                 isRomanUrdu = isRomanUrdu,
+                isExpanded = isTradeBarExpanded,
+                onToggleExpand = { isTradeBarExpanded = !isTradeBarExpanded },
                 onOpenLong = { onOpenInstantTrade(true) },
                 onOpenShort = { onOpenInstantTrade(false) }
             )
@@ -468,6 +580,8 @@ private fun ActivePositionBar(
 private fun InstantTradeActionBar(
     currentPrice: Double,
     isRomanUrdu: Boolean,
+    isExpanded: Boolean,
+    onToggleExpand: () -> Unit,
     onOpenLong: () -> Unit,
     onOpenShort: () -> Unit
 ) {
@@ -475,74 +589,116 @@ private fun InstantTradeActionBar(
         color = CryptoSurface,
         modifier = Modifier
             .fillMaxWidth()
-            .border(1.dp, CryptoCardBorder, RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp))
+            .border(1.dp, CryptoCardBorder, RoundedCornerShape(topStart = 10.dp, topEnd = 10.dp))
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 8.dp)
+                .padding(horizontal = 10.dp, vertical = if (isExpanded) 6.dp else 4.dp)
         ) {
+            // Header row with collapse/expand toggle
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onToggleExpand() },
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = if (isRomanUrdu) "Live Chart Paper Trade (5x Lev • 2% Risk)" else "Instant Paper Trade (5x Lev • 2% Risk)",
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = TextSecondary
-                )
-                Text(
-                    text = if (currentPrice > 0) "$${formatShortPrice(currentPrice)}" else "",
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = TextPrimary
-                )
-            }
-
-            Spacer(modifier = Modifier.height(6.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Button(
-                    onClick = onOpenLong,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = BullGreen,
-                        contentColor = Color.Black
-                    ),
-                    shape = RoundedCornerShape(8.dp),
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(38.dp)
-                        .testTag("instant_long_button")
-                ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = if (isRomanUrdu) "▲ BUY / LONG (Kharidari)" else "▲ BUY / LONG",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold
+                        text = if (isRomanUrdu) "Paper Trade (5x Lev)" else "Paper Trade (5x Lev)",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary
                     )
+                    if (currentPrice > 0) {
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "$${formatShortPrice(currentPrice)}",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = AccentCyan
+                        )
+                    }
                 }
 
-                Button(
-                    onClick = onOpenShort,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = BearRed,
-                        contentColor = Color.White
-                    ),
-                    shape = RoundedCornerShape(8.dp),
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(38.dp)
-                        .testTag("instant_short_button")
-                ) {
-                    Text(
-                        text = if (isRomanUrdu) "▼ SELL / SHORT (Farokht)" else "▼ SELL / SHORT",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (!isExpanded) {
+                        // Quick mini action buttons in collapsed mode!
+                        Button(
+                            onClick = onOpenLong,
+                            colors = ButtonDefaults.buttonColors(containerColor = BullGreen, contentColor = Color.Black),
+                            shape = RoundedCornerShape(4.dp),
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                            modifier = Modifier.height(24.dp).testTag("mini_long_button")
+                        ) {
+                            Text("▲ LONG", fontSize = 10.sp, fontWeight = FontWeight.ExtraBold)
+                        }
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Button(
+                            onClick = onOpenShort,
+                            colors = ButtonDefaults.buttonColors(containerColor = BearRed, contentColor = Color.White),
+                            shape = RoundedCornerShape(4.dp),
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                            modifier = Modifier.height(24.dp).testTag("mini_short_button")
+                        ) {
+                            Text("▼ SHORT", fontSize = 10.sp, fontWeight = FontWeight.ExtraBold)
+                        }
+                        Spacer(modifier = Modifier.width(4.dp))
+                    }
+                    Icon(
+                        imageVector = if (isExpanded) Icons.Default.KeyboardArrowDown else Icons.Default.KeyboardArrowUp,
+                        contentDescription = if (isExpanded) "Collapse trade bar" else "Expand trade bar",
+                        tint = TextSecondary,
+                        modifier = Modifier.size(18.dp)
                     )
+                }
+            }
+
+            if (isExpanded) {
+                Spacer(modifier = Modifier.height(6.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Button(
+                        onClick = onOpenLong,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = BullGreen,
+                            contentColor = Color.Black
+                        ),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(36.dp)
+                            .testTag("instant_long_button")
+                    ) {
+                        Text(
+                            text = if (isRomanUrdu) "▲ BUY / LONG (5x)" else "▲ BUY / LONG (5x)",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+
+                    Button(
+                        onClick = onOpenShort,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = BearRed,
+                            contentColor = Color.White
+                        ),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(36.dp)
+                            .testTag("instant_short_button")
+                    ) {
+                        Text(
+                            text = if (isRomanUrdu) "▼ SELL / SHORT (5x)" else "▼ SELL / SHORT (5x)",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
             }
         }
@@ -655,21 +811,22 @@ private fun OverlayChip(
     selected: Boolean,
     onClick: () -> Unit
 ) {
-    FilterChip(
-        selected = selected,
-        onClick = onClick,
-        label = { Text(label, fontSize = 11.sp, color = if (selected) Color.Black else TextSecondary) },
-        colors = FilterChipDefaults.filterChipColors(
-            selectedContainerColor = BullGreen,
-            containerColor = CryptoSurface
-        ),
-        border = FilterChipDefaults.filterChipBorder(
-            enabled = true,
-            selected = selected,
-            borderColor = CryptoCardBorder,
-            selectedBorderColor = BullGreen
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(5.dp))
+            .background(if (selected) BullGreen else CryptoSurface)
+            .border(0.8.dp, if (selected) BullGreen else CryptoCardBorder, RoundedCornerShape(5.dp))
+            .clickable { onClick() }
+            .padding(horizontal = 7.dp, vertical = 3.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = label,
+            fontSize = 10.sp,
+            fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+            color = if (selected) Color.Black else TextSecondary
         )
-    )
+    }
 }
 
 private fun DrawScope.drawChartGrid(
@@ -694,10 +851,16 @@ private fun DrawScope.drawChartGrid(
             pathEffect = PathEffect.dashPathEffect(floatArrayOf(8f, 8f))
         )
 
-        // Draw Price Label on right
+        // Draw Price Label on right with dark background badge
         val textLayoutResult = textMeasurer.measure(
             text = formatShortPrice(price),
             style = TextStyle(fontSize = 9.sp, color = TextMuted)
+        )
+        drawRoundRect(
+            color = CryptoSurface.copy(alpha = 0.85f),
+            topLeft = Offset(width - textLayoutResult.size.width - 10f, y - textLayoutResult.size.height / 2f - 1f),
+            size = Size(textLayoutResult.size.width + 8f, textLayoutResult.size.height + 2f),
+            cornerRadius = CornerRadius(3f, 3f)
         )
         drawText(
             textLayoutResult = textLayoutResult,

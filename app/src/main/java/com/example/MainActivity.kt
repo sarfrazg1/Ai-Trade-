@@ -121,7 +121,8 @@ fun SmartTradeApp(viewModel: TradingViewModel) {
                 onSymbolSelected = { viewModel.selectPair(it) },
                 onTimeframeSelected = { viewModel.selectTimeframe(it) },
                 onRefresh = { viewModel.refreshData() },
-                onAddWatchlist = { viewModel.addToWatchlist(it) }
+                onAddWatchlist = { viewModel.addToWatchlist(it) },
+                isChartTab = uiState.selectedTab == 1
             )
         },
         bottomBar = {
