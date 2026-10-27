@@ -68,6 +68,10 @@ fun BeginnerGuideScreen(
     developerWhatsapp: String = "+923360074976",
     isRomanUrdu: Boolean = false,
     onUpdateDeveloperInfo: (String, String) -> Unit = { _, _ -> },
+    onOpenSubscription: () -> Unit = {},
+    onOpenInfluencerPortal: () -> Unit = {},
+    onOpenAdminPortal: () -> Unit = {},
+    onOpenLegal: (String) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -101,6 +105,73 @@ fun BeginnerGuideScreen(
                 } catch (_: Exception) {}
             }
         )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // Subscription & Partner Quick Actions
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Button(
+                onClick = onOpenSubscription,
+                colors = ButtonDefaults.buttonColors(containerColor = BullGreen),
+                shape = RoundedCornerShape(8.dp),
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(
+                    text = if (isRomanUrdu) "★ Plans / Upgrade" else "★ Plans / Upgrade",
+                    fontSize = 11.sp,
+                    color = Color.Black,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            Button(
+                onClick = onOpenInfluencerPortal,
+                colors = ButtonDefaults.buttonColors(containerColor = AccentCyan),
+                shape = RoundedCornerShape(8.dp),
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(
+                    text = if (isRomanUrdu) "Influencer Portal" else "Influencer (20%)",
+                    fontSize = 11.sp,
+                    color = Color.Black,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(6.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            androidx.compose.material3.OutlinedButton(
+                onClick = onOpenAdminPortal,
+                shape = RoundedCornerShape(8.dp),
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(
+                    text = if (isRomanUrdu) "⚙ Admin Panel" else "⚙ Admin Panel",
+                    fontSize = 11.sp,
+                    color = TextSecondary
+                )
+            }
+
+            androidx.compose.material3.OutlinedButton(
+                onClick = { onOpenLegal("DISCLAIMER") },
+                shape = RoundedCornerShape(8.dp),
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(
+                    text = if (isRomanUrdu) "📜 Legal & Disclaimer" else "📜 Legal / Disclaimer",
+                    fontSize = 11.sp,
+                    color = TextSecondary
+                )
+            }
+        }
 
         Spacer(modifier = Modifier.height(16.dp))
 

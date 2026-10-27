@@ -69,6 +69,9 @@ fun TopBarHeader(
     watchlist: List<WatchlistEntity>,
     developerName: String = "Rao Muhammad Sarfraz",
     isRomanUrdu: Boolean = false,
+    subscriptionPlan: com.example.domain.model.SubscriptionPlan = com.example.domain.model.SubscriptionPlan.FREE_TRIAL,
+    isSubscribed: Boolean = false,
+    onSubscriptionClick: () -> Unit = {},
     onToggleLanguage: () -> Unit = {},
     onDeveloperClick: () -> Unit = {},
     onSymbolSelected: (String) -> Unit,
@@ -88,7 +91,7 @@ fun TopBarHeader(
                 .fillMaxWidth()
                 .padding(horizontal = 14.dp, vertical = 10.dp)
         ) {
-            // Row 1: App Brand, Dev Badge, Language Toggle, Status, Refresh
+            // Row 1: App Brand, Dev Badge, Subscription Badge, Language Toggle, Status, Refresh
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -116,6 +119,25 @@ fun TopBarHeader(
                         color = TextPrimary
                     )
                     Spacer(modifier = Modifier.width(6.dp))
+                    // Subscription Plan Badge (Clickable)
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(
+                                if (isSubscribed) BullGreen.copy(alpha = 0.2f)
+                                else WarningAmber.copy(alpha = 0.2f)
+                            )
+                            .clickable { onSubscriptionClick() }
+                            .padding(horizontal = 5.dp, vertical = 2.dp)
+                    ) {
+                        Text(
+                            text = if (isSubscribed) "★ ${subscriptionPlan.id}" else "UPGRADE",
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (isSubscribed) BullGreen else WarningAmber
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(4.dp))
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(4.dp))

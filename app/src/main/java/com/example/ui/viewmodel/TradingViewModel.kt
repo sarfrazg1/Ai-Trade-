@@ -44,12 +44,21 @@ data class TradingUiState(
     val developerName: String = "Rao Muhammad Sarfraz",
     val developerWhatsapp: String = "+923360074976",
     val showDeveloperDialog: Boolean = false,
-    val isRomanUrdu: Boolean = false
+    val isRomanUrdu: Boolean = false,
+    // Subscription & Modals
+    val showSubscriptionModal: Boolean = false,
+    val showAdminModal: Boolean = false,
+    val showInfluencerModal: Boolean = false,
+    val showLegalModal: Boolean = false,
+    val legalTab: String = "DISCLAIMER"
 )
 
 class TradingViewModel(application: Application) : AndroidViewModel(application) {
 
     private val prefs = application.getSharedPreferences("smart_trade_prefs", Application.MODE_PRIVATE)
+
+    val subscriptionManager = com.example.data.repository.SubscriptionManager(application.applicationContext)
+    val subscriptionState = subscriptionManager.subscriptionState
 
     private val db = Room.databaseBuilder(
         application.applicationContext,
@@ -64,7 +73,9 @@ class TradingViewModel(application: Application) : AndroidViewModel(application)
         TradingUiState(
             developerName = prefs.getString("dev_name", "Rao Muhammad Sarfraz") ?: "Rao Muhammad Sarfraz",
             developerWhatsapp = prefs.getString("dev_whatsapp", "+923360074976") ?: "+923360074976",
-            isRomanUrdu = prefs.getBoolean("is_roman_urdu", false)
+            isRomanUrdu = prefs.getBoolean("is_roman_urdu", false),
+            // Default to false so emulator preview and app open immediately to interactive charts & signals
+            showSubscriptionModal = false
         )
     )
     val uiState: StateFlow<TradingUiState> = _uiState.asStateFlow()
@@ -266,6 +277,51 @@ class TradingViewModel(application: Application) : AndroidViewModel(application)
         _uiState.value = _uiState.value.copy(backtestSummary = summary)
     }
 
+    fun openSubscriptionModal(show: Boolean) {
+        if (!show) {
+            prefs.edit().putBoolean("has_seen_welcome_screen", true).apply()
+        }
+        _uiState.value = _uiState.value.copy(showSubscriptionModal = show)
+    }
+
+    fun openAdminModal(show: Boolean) {
+        _uiState.value = _uiState.value.copy(showAdminModal = show)
+    }
+
+    fun openInfluencerModal(show: Boolean) {
+        _uiState.value = _uiState.value.copy(showInfluencerModal = show)
+    }
+
+    fun openLegalModal(tab: String = "DISCLAIMER") {
+        _uiState.value = _uiState.value.copy(showLegalModal = true, legalTab = tab)
+    }
+
+    fun closeLegalModal() {
+        _uiState.value = _uiState.value.copy(showLegalModal = false)
+    }
+
+    fun applyReferralCode(code: String): Boolean {
+        val success = subscriptionManager.setReferralCode(code)
+        if (success) {
+            _uiState.value = _uiState.value.copy(userNotification = "Referral code applied!")
+        }
+        return success
+    }
+
+    fun redeemActivationCode(code: String) {
+        val result = subscriptionManager.redeemActivationCode(code)
+        result.onSuccess { message ->
+            _uiState.value = _uiState.value.copy(userNotification = message)
+        }.onFailure { err ->
+            _uiState.value = _uiState.value.copy(userNotification = err.localizedMessage ?: "Invalid code")
+        }
+    }
+
+    fun acceptLegalConsent() {
+        subscriptionManager.recordLegalConsent(disclaimer = true, terms = true)
+        _uiState.value = _uiState.value.copy(userNotification = "Terms & Disclaimer accepted.")
+    }
+
     private fun loadCurrentPair() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
@@ -290,9 +346,12 @@ class TradingViewModel(application: Application) : AndroidViewModel(application)
                     errorMessage = null
                 )
             }.onFailure { err ->
+                val fallback = _uiState.value.analysisResult
+                    ?: DefaultMarketSnapshot.createInitialSnapshot(symbol, tf)
                 _uiState.value = _uiState.value.copy(
+                    analysisResult = fallback,
                     isLoading = false,
-                    errorMessage = err.localizedMessage ?: "Failed to load Binance market data"
+                    errorMessage = err.localizedMessage ?: "Using offline market snapshot"
                 )
             }
         }

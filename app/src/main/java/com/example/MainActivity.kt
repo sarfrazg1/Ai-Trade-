@@ -2,6 +2,7 @@ package com.example
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
@@ -88,6 +89,7 @@ fun SmartTradeApp(viewModel: TradingViewModel) {
     val watchlist by viewModel.watchlist.collectAsState()
     val savedSignals by viewModel.savedSignals.collectAsState()
     val paperTrades by viewModel.paperTrades.collectAsState()
+    val subscriptionState by viewModel.subscriptionState.collectAsState()
 
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -111,6 +113,9 @@ fun SmartTradeApp(viewModel: TradingViewModel) {
                 watchlist = watchlist,
                 developerName = uiState.developerName,
                 isRomanUrdu = uiState.isRomanUrdu,
+                subscriptionPlan = subscriptionState.currentPlan,
+                isSubscribed = subscriptionState.isPrivilegedActive,
+                onSubscriptionClick = { viewModel.openSubscriptionModal(true) },
                 onToggleLanguage = { viewModel.toggleLanguage() },
                 onDeveloperClick = { viewModel.selectTab(5) },
                 onSymbolSelected = { viewModel.selectPair(it) },
@@ -276,9 +281,84 @@ fun SmartTradeApp(viewModel: TradingViewModel) {
                         developerName = uiState.developerName,
                         developerWhatsapp = uiState.developerWhatsapp,
                         isRomanUrdu = uiState.isRomanUrdu,
-                        onUpdateDeveloperInfo = { name, wa -> viewModel.updateDeveloperInfo(name, wa) }
+                        onUpdateDeveloperInfo = { name, wa -> viewModel.updateDeveloperInfo(name, wa) },
+                        onOpenSubscription = { viewModel.openSubscriptionModal(true) },
+                        onOpenInfluencerPortal = { viewModel.openInfluencerModal(true) },
+                        onOpenAdminPortal = { viewModel.openAdminModal(true) },
+                        onOpenLegal = { viewModel.openLegalModal(it) }
                     )
                 }
+            } else {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.padding(24.dp)
+                    ) {
+                        CircularProgressIndicator(
+                            color = BullGreen,
+                            modifier = Modifier.size(36.dp)
+                        )
+                        Spacer(modifier = Modifier.height(14.dp))
+                        Text(
+                            text = if (uiState.isRomanUrdu) "Smart Trade AI data load ho raha hai..." else "Loading Smart Trade AI analysis...",
+                            color = TextPrimary,
+                            fontWeight = FontWeight.Medium,
+                            fontSize = 14.sp,
+                            textAlign = TextAlign.Center
+                        )
+                        Spacer(modifier = Modifier.height(14.dp))
+                        Button(
+                            onClick = { viewModel.refreshData() },
+                            colors = ButtonDefaults.buttonColors(containerColor = BullGreen)
+                        ) {
+                            Text(
+                                text = if (uiState.isRomanUrdu) "Dobara Koshish Karein" else "Retry Connection",
+                                color = Color.Black,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Subscription & Plans Modal
+            if (uiState.showSubscriptionModal) {
+                BackHandler { viewModel.openSubscriptionModal(false) }
+                com.example.ui.screens.SubscriptionScreen(
+                    subscriptionState = subscriptionState,
+                    developerWhatsapp = uiState.developerWhatsapp,
+                    isRomanUrdu = uiState.isRomanUrdu,
+                    onApplyReferralCode = { viewModel.applyReferralCode(it) },
+                    onRedeemCode = { viewModel.redeemActivationCode(it) },
+                    onClose = { viewModel.openSubscriptionModal(false) },
+                    onOpenLegalPage = { viewModel.openLegalModal(it) },
+                    onOpenAdminPortal = { viewModel.openAdminModal(true) }
+                )
+            } else if (uiState.showAdminModal) {
+                BackHandler { viewModel.openAdminModal(false) }
+                com.example.ui.screens.AdminScreen(
+                    subscriptionManager = viewModel.subscriptionManager,
+                    onClose = { viewModel.openAdminModal(false) }
+                )
+            } else if (uiState.showInfluencerModal) {
+                BackHandler { viewModel.openInfluencerModal(false) }
+                com.example.ui.screens.InfluencerDashboardScreen(
+                    subscriptionManager = viewModel.subscriptionManager,
+                    initialReferralCode = subscriptionState.referralCode,
+                    onClose = { viewModel.openInfluencerModal(false) }
+                )
+            } else if (uiState.showLegalModal) {
+                BackHandler { viewModel.closeLegalModal() }
+                com.example.ui.screens.LegalDocumentsScreen(
+                    initialTab = uiState.legalTab,
+                    onClose = { viewModel.closeLegalModal() },
+                    onAcceptConsent = { viewModel.acceptLegalConsent() }
+                )
+            } else if (uiState.selectedTab != 0) {
+                BackHandler { viewModel.selectTab(0) }
             }
         }
     }
