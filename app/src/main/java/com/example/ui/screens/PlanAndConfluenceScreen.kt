@@ -459,7 +459,7 @@ private fun TradingPlanDetailsCard(plan: TradingPlan, isRomanUrdu: Boolean = fal
                     color = TextPrimary
                 )
                 Text(
-                    text = "R:R Ratio 1:${String.format("%.2f", plan.riskRewardRatio)}",
+                    text = "R:R Ratio 1:${String.format(java.util.Locale.US, "%.2f", plan.riskRewardRatio)}",
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
                     color = AccentCyan
@@ -752,7 +752,7 @@ private fun RiskCalculatorCard(
                 )
                 PlanMetricRow(
                     label = "Suggested Position Size",
-                    value = "$${formatPrice(pos.positionSizeUsd)} (${String.format("%.4f", pos.coinQuantity)} coins)",
+                    value = "$${formatPrice(pos.positionSizeUsd)} (${String.format(java.util.Locale.US, "%.4f", pos.coinQuantity)} coins)",
                     color = AccentCyan
                 )
                 PlanMetricRow(
@@ -782,8 +782,8 @@ private data class Quadruple<A, B, C, D>(val first: A, val second: B, val third:
 
 private fun formatPrice(p: Double): String {
     return when {
-        p >= 1000.0 -> String.format("%,.2f", p)
-        p >= 1.0 -> String.format("%.4f", p)
-        else -> String.format("%.6f", p)
+        p >= 1000.0 -> String.format(java.util.Locale.US, "%,.2f", p)
+        p >= 1.0 -> String.format(java.util.Locale.US, "%.4f", p)
+        else -> String.format(java.util.Locale.US, "%.6f", p)
     }
 }

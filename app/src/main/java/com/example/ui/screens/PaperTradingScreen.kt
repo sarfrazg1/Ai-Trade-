@@ -259,7 +259,7 @@ private fun OpenTradesList(
                         ) {
                             Text("Margin: $${formatPrice(trade.margin)}", fontSize = 11.sp, color = TextMuted)
                             Text(
-                                text = "PnL: ${if (isPos) "+" else ""}$${formatPrice(pnlUsd)} (${String.format("%.2f", pnlPct)}%)",
+                                text = "PnL: ${if (isPos) "+" else ""}$${formatPrice(pnlUsd)} (${String.format(Locale.US, "%.2f", pnlPct)}%)",
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = if (isPos) BullGreen else BearRed
@@ -477,8 +477,8 @@ private fun BacktestMetric(label: String, value: String, isPositive: Boolean? = 
 
 private fun formatPrice(p: Double): String {
     return when {
-        p >= 1000.0 -> String.format("%,.2f", p)
-        p >= 1.0 -> String.format("%.4f", p)
-        else -> String.format("%.6f", p)
+        p >= 1000.0 -> String.format(Locale.US, "%,.2f", p)
+        p >= 1.0 -> String.format(Locale.US, "%.4f", p)
+        else -> String.format(Locale.US, "%.6f", p)
     }
 }

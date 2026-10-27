@@ -154,7 +154,7 @@ fun TopBarHeader(
                             Spacer(modifier = Modifier.width(6.dp))
                             val changeSign = if (isPositive) "+" else ""
                             Text(
-                                text = "$changeSign${String.format("%.2f", stats.priceChange24h)}%",
+                                text = "$changeSign${String.format(Locale.US, "%.2f", stats.priceChange24h)}%",
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = if (isPositive) BullGreen else BearRed,
@@ -457,7 +457,7 @@ fun TopBarHeader(
                             Spacer(modifier = Modifier.width(6.dp))
                             val changeSign = if (isPositive) "+" else ""
                             Text(
-                                text = "$changeSign${String.format("%.2f", stats.priceChange24h)}%",
+                                text = "$changeSign${String.format(Locale.US, "%.2f", stats.priceChange24h)}%",
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = if (isPositive) BullGreen else BearRed,
@@ -623,8 +623,8 @@ fun TopBarHeader(
 
 private fun formatPrice(p: Double): String {
     return when {
-        p >= 1000.0 -> String.format("$%,.2f", p)
-        p >= 1.0 -> String.format("$%.4f", p)
-        else -> String.format("$%.6f", p)
+        p >= 1000.0 -> String.format(Locale.US, "$%,.2f", p)
+        p >= 1.0 -> String.format(Locale.US, "$%.4f", p)
+        else -> String.format(Locale.US, "$%.6f", p)
     }
 }

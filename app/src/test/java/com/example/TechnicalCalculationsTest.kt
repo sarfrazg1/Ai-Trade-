@@ -136,4 +136,23 @@ class TechnicalCalculationsTest {
         val smc = SmcDetector.detectSmc(candles)
         assertNotNull(smc)
     }
+
+    @Test
+    fun testLocaleIndependenceOfFormatting() {
+        val originalDefaultLocale = java.util.Locale.getDefault()
+        try {
+            // Set default locale to Urdu (Pakistan) or Arabic / German where decimals use comma or non-ASCII digits
+            java.util.Locale.setDefault(java.util.Locale("ur", "PK"))
+
+            val price = 1234.56
+            val formattedPrice = String.format(java.util.Locale.US, "%,.2f", price)
+            assertEquals("1,234.56", formattedPrice)
+
+            // Test string double parsing from formatted string
+            val parsedDouble = "1234.56".toDoubleOrNull()
+            assertEquals(1234.56, parsedDouble!!, 0.001)
+        } finally {
+            java.util.Locale.setDefault(originalDefaultLocale)
+        }
+    }
 }

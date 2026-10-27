@@ -149,13 +149,13 @@ private fun FundingRateCard(stats: FuturesStats) {
                 Column {
                     val sign = if (fundingPct > 0) "+" else ""
                     Text(
-                        text = "$sign${String.format("%.4f", fundingPct)}%",
+                        text = "$sign${String.format(Locale.US, "%.4f", fundingPct)}%",
                         fontSize = 22.sp,
                         fontWeight = FontWeight.Black,
                         color = if (isNegative) BullGreen else if (fundingPct > 0.03) BearRed else TextPrimary
                     )
                     Text(
-                        text = "Est. Annualized (APR): ~${String.format("%.2f", fundingPct * 3 * 365)}%",
+                        text = "Est. Annualized (APR): ~${String.format(Locale.US, "%.2f", fundingPct * 3 * 365)}%",
                         fontSize = 11.sp,
                         color = TextSecondary
                     )
@@ -210,7 +210,7 @@ private fun OpenInterestCard(stats: FuturesStats) {
                 Column {
                     Text("Open Interest (Contracts)", fontSize = 10.sp, color = TextMuted)
                     Text(
-                        text = if (stats.openInterest > 0) String.format("%,.0f", stats.openInterest) else "N/A (Spot fallback)",
+                        text = if (stats.openInterest > 0) String.format(Locale.US, "%,.0f", stats.openInterest) else "N/A (Spot fallback)",
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
                         color = TextPrimary
@@ -219,7 +219,7 @@ private fun OpenInterestCard(stats: FuturesStats) {
                 Column(horizontalAlignment = Alignment.End) {
                     Text("24h Volume", fontSize = 10.sp, color = TextMuted)
                     Text(
-                        text = String.format("%,.0f", stats.volume24h),
+                        text = String.format(Locale.US, "%,.0f", stats.volume24h),
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
                         color = AccentCyan
@@ -254,7 +254,7 @@ private fun LongShortRatioCard(ratio: Double?) {
             ) {
                 Text(text = "Global Long/Short Account Ratio", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
                 Text(
-                    text = if (ratio != null) String.format("%.2f", ratio) else "1.00",
+                    text = if (ratio != null) String.format(Locale.US, "%.2f", ratio) else "1.00",
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,
                     color = AccentCyan
@@ -363,8 +363,8 @@ private fun DataDisclosureNotice(isFallback: Boolean) {
 
 private fun formatPrice(p: Double): String {
     return when {
-        p >= 1000.0 -> String.format("%,.2f", p)
-        p >= 1.0 -> String.format("%.4f", p)
-        else -> String.format("%.6f", p)
+        p >= 1000.0 -> String.format(Locale.US, "%,.2f", p)
+        p >= 1.0 -> String.format(Locale.US, "%.4f", p)
+        else -> String.format(Locale.US, "%.6f", p)
     }
 }

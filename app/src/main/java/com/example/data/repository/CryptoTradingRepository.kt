@@ -381,9 +381,9 @@ class CryptoTradingRepository(
 
     private fun formatPrice(p: Double): String {
         return when {
-            p >= 1000.0 -> String.format("%,.2f", p)
-            p >= 1.0 -> String.format("%.4f", p)
-            else -> String.format("%.6f", p)
+            p >= 1000.0 -> String.format(java.util.Locale.US, "%,.2f", p)
+            p >= 1.0 -> String.format(java.util.Locale.US, "%.4f", p)
+            else -> String.format(java.util.Locale.US, "%.6f", p)
         }
     }
 }
