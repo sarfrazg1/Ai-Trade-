@@ -32,11 +32,14 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
@@ -112,11 +115,12 @@ fun CandlestickChart(
 
     val currentActiveTrade = activeTrades.firstOrNull { it.status == "OPEN" }
 
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .background(CryptoBackground)
-    ) {
+    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+        Column(
+            modifier = modifier
+                .fillMaxSize()
+                .background(CryptoBackground)
+        ) {
         // Ultra-compact sleek overlay controls & candle density toolbar
         Row(
             modifier = Modifier
@@ -393,7 +397,7 @@ fun CandlestickChart(
                             Text(text = "H: ${formatShortPrice(displayCandle.high)}", fontSize = 10.sp, color = BullGreen)
                             Text(text = "L: ${formatShortPrice(displayCandle.low)}", fontSize = 10.sp, color = BearRed)
                             Text(
-                                text = "C: ${formatShortPrice(displayCandle.close)} (${if (diff >= 0) "+" else ""}${String.format("%.2f", pct)}%)",
+                                text = "C: ${formatShortPrice(displayCandle.close)} (${if (diff >= 0) "+" else ""}${String.format(Locale.US, "%.2f", pct)}%)",
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = if (isBull) BullGreen else BearRed
@@ -404,23 +408,24 @@ fun CandlestickChart(
             }
         }
 
-        // Bottom Gate.io / Binance Futures Style Position & Quick-Action HUD
-        if (currentActiveTrade != null) {
-            ActivePositionBar(
-                trade = currentActiveTrade,
-                currentPrice = if (currentLivePrice > 0) currentLivePrice else candles.lastOrNull()?.close ?: currentActiveTrade.entryPrice,
-                isRomanUrdu = isRomanUrdu,
-                onCloseTrade = { onCloseTrade(currentActiveTrade) }
-            )
-        } else {
-            InstantTradeActionBar(
-                currentPrice = if (currentLivePrice > 0) currentLivePrice else candles.lastOrNull()?.close ?: 0.0,
-                isRomanUrdu = isRomanUrdu,
-                isExpanded = isTradeBarExpanded,
-                onToggleExpand = { isTradeBarExpanded = !isTradeBarExpanded },
-                onOpenLong = { onOpenInstantTrade(true) },
-                onOpenShort = { onOpenInstantTrade(false) }
-            )
+            // Bottom Gate.io / Binance Futures Style Position & Quick-Action HUD
+            if (currentActiveTrade != null) {
+                ActivePositionBar(
+                    trade = currentActiveTrade,
+                    currentPrice = if (currentLivePrice > 0) currentLivePrice else candles.lastOrNull()?.close ?: currentActiveTrade.entryPrice,
+                    isRomanUrdu = isRomanUrdu,
+                    onCloseTrade = { onCloseTrade(currentActiveTrade) }
+                )
+            } else {
+                InstantTradeActionBar(
+                    currentPrice = if (currentLivePrice > 0) currentLivePrice else candles.lastOrNull()?.close ?: 0.0,
+                    isRomanUrdu = isRomanUrdu,
+                    isExpanded = isTradeBarExpanded,
+                    onToggleExpand = { isTradeBarExpanded = !isTradeBarExpanded },
+                    onOpenLong = { onOpenInstantTrade(true) },
+                    onOpenShort = { onOpenInstantTrade(false) }
+                )
+            }
         }
     }
 }
@@ -541,7 +546,7 @@ private fun ActivePositionBar(
                         color = TextMuted
                     )
                     Text(
-                        text = "${if (isPos) "+" else ""}$${String.format("%.2f", pnlUsd)} (${String.format("%.2f", pnlPct)}%)",
+                        text = "${if (isPos) "+" else ""}$${String.format(Locale.US, "%.2f", pnlUsd)} (${String.format(Locale.US, "%.2f", pnlPct)}%)",
                         fontSize = 13.sp,
                         fontWeight = FontWeight.ExtraBold,
                         color = if (isPos) BullGreen else BearRed
@@ -567,7 +572,7 @@ private fun ActivePositionBar(
                     color = BullGreen
                 )
                 Text(
-                    text = "Margin: $${String.format("%.1f", trade.margin)}",
+                    text = "Margin: $${String.format(Locale.US, "%.1f", trade.margin)}",
                     fontSize = 10.sp,
                     color = TextMuted
                 )
@@ -1100,8 +1105,8 @@ private fun DrawScope.drawBosLines(
 
 private fun formatShortPrice(p: Double): String {
     return when {
-        p >= 1000.0 -> String.format("%,.1f", p)
-        p >= 1.0 -> String.format("%.2f", p)
-        else -> String.format("%.4f", p)
+        p >= 1000.0 -> String.format(Locale.US, "%,.1f", p)
+        p >= 1.0 -> String.format(Locale.US, "%.2f", p)
+        else -> String.format(Locale.US, "%.4f", p)
     }
 }

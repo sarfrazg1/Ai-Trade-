@@ -175,7 +175,7 @@ private fun RsiCard(rsi: Double?) {
 
             if (rsi != null) {
                 Text(
-                    text = String.format("%.2f", rsi),
+                    text = String.format(java.util.Locale.US, "%.2f", rsi),
                     fontSize = 22.sp,
                     fontWeight = FontWeight.Black,
                     color = TextPrimary
@@ -363,12 +363,12 @@ private fun BollingerBandsCard(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(
-                        text = "Bandwidth: ${String.format("%.2f", (bandwidth ?: 0.0) * 100)}%",
+                        text = "Bandwidth: ${String.format(java.util.Locale.US, "%.2f", (bandwidth ?: 0.0) * 100)}%",
                         fontSize = 11.sp,
                         color = TextSecondary
                     )
                     Text(
-                        text = "%B Location: ${String.format("%.2f", (percentB ?: 0.5) * 100)}%",
+                        text = "%B Location: ${String.format(java.util.Locale.US, "%.2f", (percentB ?: 0.5) * 100)}%",
                         fontSize = 11.sp,
                         color = when {
                             (percentB ?: 0.5) > 1.0 -> BearRed
@@ -413,8 +413,8 @@ private fun StochRsiCard(k: Double?, d: Double?) {
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    MetricCol(label = "%K Line", value = String.format("%.2f", k), color = AccentCyan)
-                    MetricCol(label = "%D Signal", value = String.format("%.2f", d), color = WarningAmber)
+                    MetricCol(label = "%K Line", value = String.format(java.util.Locale.US, "%.2f", k), color = AccentCyan)
+                    MetricCol(label = "%D Signal", value = String.format(java.util.Locale.US, "%.2f", d), color = WarningAmber)
                 }
             } else {
                 Text("Need 30+ candles for Stoch RSI", fontSize = 12.sp, color = TextMuted)
@@ -448,7 +448,7 @@ private fun VolumeAndAtrCard(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text("ATR 14 (Avg Range)", fontSize = 12.sp, color = TextSecondary)
-                    Text("$${formatPrice(atr)} (${String.format("%.2f", atrPct)}%)", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                    Text("$${formatPrice(atr)} (${String.format(java.util.Locale.US, "%.2f", atrPct)}%)", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
                 }
             }
 
@@ -478,7 +478,7 @@ private fun VolumeAndAtrCard(
                 ) {
                     Text("Volume vs 20-MA", fontSize = 12.sp, color = TextSecondary)
                     Text(
-                        "${String.format("%.1f", volumeRatio)}x ${if (isSpike) "⚡ VOLUME SPIKE" else "Normal"}",
+                        "${String.format(java.util.Locale.US, "%.1f", volumeRatio)}x ${if (isSpike) "⚡ VOLUME SPIKE" else "Normal"}",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
                         color = if (isSpike) BullGreen else TextSecondary
@@ -500,16 +500,16 @@ private fun MetricCol(label: String, value: String, color: Color) {
 
 private fun formatPrice(p: Double): String {
     return when {
-        p >= 1000.0 -> String.format("%,.2f", p)
-        p >= 1.0 -> String.format("%.4f", p)
-        else -> String.format("%.6f", p)
+        p >= 1000.0 -> String.format(java.util.Locale.US, "%,.2f", p)
+        p >= 1.0 -> String.format(java.util.Locale.US, "%.4f", p)
+        else -> String.format(java.util.Locale.US, "%.6f", p)
     }
 }
 
 private fun formatShortPrice(p: Double): String {
     return when {
-        p >= 1000.0 -> String.format("%,.1f", p)
-        p >= 1.0 -> String.format("%.2f", p)
-        else -> String.format("%.4f", p)
+        p >= 1000.0 -> String.format(java.util.Locale.US, "%,.1f", p)
+        p >= 1.0 -> String.format(java.util.Locale.US, "%.2f", p)
+        else -> String.format(java.util.Locale.US, "%.4f", p)
     }
 }

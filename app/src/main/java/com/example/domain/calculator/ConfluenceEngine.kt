@@ -227,17 +227,17 @@ object ConfluenceEngine {
             if (funding < 0.0) {
                 liquidityPoints += 8
                 bullVotes += 1
-                supporting.add("Negative funding rate (${String.format("%.4f", funding * 100)}%): Shorts paying longs, squeeze risk favoring longs")
+                supporting.add("Negative funding rate (${String.format(java.util.Locale.US, "%.4f", funding * 100)}%): Shorts paying longs, squeeze risk favoring longs")
             } else if (funding > 0.03 / 100.0) {
-                conflicting.add("Elevated funding rate (${String.format("%.4f", funding * 100)}%): Crowded long positioning")
+                conflicting.add("Elevated funding rate (${String.format(java.util.Locale.US, "%.4f", funding * 100)}%): Crowded long positioning")
                 bearVotes += 1
             } else {
                 liquidityPoints += 5
-                supporting.add("Neutral funding rate (${String.format("%.4f", funding * 100)}%)")
+                supporting.add("Neutral funding rate (${String.format(java.util.Locale.US, "%.4f", funding * 100)}%)")
             }
 
             if (futuresStats.longShortRatio != null) {
-                supporting.add("Long/Short Account Ratio: ${String.format("%.2f", futuresStats.longShortRatio)}")
+                supporting.add("Long/Short Account Ratio: ${String.format(java.util.Locale.US, "%.2f", futuresStats.longShortRatio)}")
             }
         } else {
             missing.add("Derivatives metrics temporarily offline or spot fallback")
@@ -424,9 +424,9 @@ object ConfluenceEngine {
 
     private fun formatPrice(p: Double): String {
         return when {
-            p >= 1000.0 -> String.format("%,.2f", p)
-            p >= 1.0 -> String.format("%.4f", p)
-            else -> String.format("%.6f", p)
+            p >= 1000.0 -> String.format(java.util.Locale.US, "%,.2f", p)
+            p >= 1.0 -> String.format(java.util.Locale.US, "%.4f", p)
+            else -> String.format(java.util.Locale.US, "%.6f", p)
         }
     }
 }
