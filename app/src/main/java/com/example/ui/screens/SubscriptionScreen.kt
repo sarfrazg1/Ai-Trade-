@@ -92,6 +92,7 @@ fun SubscriptionScreen(
     onClose: () -> Unit,
     onOpenLegalPage: (String) -> Unit,
     onOpenAdminPortal: () -> Unit = {},
+    isAdmin: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -584,18 +585,20 @@ fun SubscriptionScreen(
             )
         }
 
-        Spacer(modifier = Modifier.height(14.dp))
+        if (isAdmin) {
+            Spacer(modifier = Modifier.height(14.dp))
 
-        // Admin Access link
-        Text(
-            text = "⚙ Admin Management (PIN Protected)",
-            fontSize = 10.sp,
-            color = TextMuted,
-            modifier = Modifier
-                .align(Alignment.CenterHorizontally)
-                .clickable { onOpenAdminPortal() }
-                .padding(4.dp)
-        )
+            // Admin Access link
+            Text(
+                text = "⚙ Admin Management (PIN Protected)",
+                fontSize = 10.sp,
+                color = TextMuted,
+                modifier = Modifier
+                    .align(Alignment.CenterHorizontally)
+                    .clickable { onOpenAdminPortal() }
+                    .padding(4.dp)
+            )
+        }
     }
 
     // Activation Code Dialog

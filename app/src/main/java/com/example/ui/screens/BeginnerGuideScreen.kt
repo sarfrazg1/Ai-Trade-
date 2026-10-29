@@ -4,6 +4,7 @@ import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -64,19 +65,15 @@ import com.example.ui.theme.WarningAmber
 
 @Composable
 fun BeginnerGuideScreen(
-    developerName: String = "Rao Muhammad Sarfraz",
-    developerWhatsapp: String = "+923360074976",
     isRomanUrdu: Boolean = false,
-    onUpdateDeveloperInfo: (String, String) -> Unit = { _, _ -> },
+    isAdmin: Boolean = false,
     onOpenSubscription: () -> Unit = {},
     onOpenInfluencerPortal: () -> Unit = {},
     onOpenAdminPortal: () -> Unit = {},
     onOpenLegal: (String) -> Unit = {},
+    onOpenAbout: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    val context = LocalContext.current
-    var showEditDialog by remember { mutableStateOf(false) }
-
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -84,86 +81,124 @@ fun BeginnerGuideScreen(
             .verticalScroll(rememberScrollState())
             .padding(14.dp)
     ) {
-        // App Developer & WhatsApp Support Card (About Developer)
-        DeveloperProfileCard(
-            name = developerName.ifEmpty { "Rao Muhammad Sarfraz" },
-            whatsapp = developerWhatsapp.ifEmpty { "+923360074976" },
-            isRomanUrdu = isRomanUrdu,
-            onEditClick = { showEditDialog = true },
-            onChatClick = { number ->
-                val clean = number.replace(Regex("[^0-9]"), "")
-                val targetNumber = if (clean.isNotEmpty()) clean else "923360074976"
-                val greeting = if (isRomanUrdu) {
-                    "Assalam-o-Alaikum%20Rao%20Sarfraz%2C%20Smart%20Trade%20AI%20app%20k%20bare%20me%20rabta%20kiya%20hai"
-                } else {
-                    "Hello%20Rao%20Muhammad%20Sarfraz%2C%20I%20am%20using%20Smart%20Trade%20AI%20app"
+        // Quick Action Buttons
+        if (isAdmin) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Button(
+                    onClick = onOpenSubscription,
+                    colors = ButtonDefaults.buttonColors(containerColor = BullGreen),
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(
+                        text = if (isRomanUrdu) "★ Plans / Upgrade" else "★ Plans / Upgrade",
+                        fontSize = 11.sp,
+                        color = Color.Black,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
-                val url = "https://wa.me/$targetNumber?text=$greeting"
-                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
-                try {
-                    context.startActivity(intent)
-                } catch (_: Exception) {}
+
+                Button(
+                    onClick = onOpenInfluencerPortal,
+                    colors = ButtonDefaults.buttonColors(containerColor = AccentCyan),
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(
+                        text = if (isRomanUrdu) "Influencer Portal" else "Influencer (20%)",
+                        fontSize = 11.sp,
+                        color = Color.Black,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
-        )
 
-        Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(6.dp))
 
-        // Subscription & Partner Quick Actions
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Button(
-                onClick = onOpenSubscription,
-                colors = ButtonDefaults.buttonColors(containerColor = BullGreen),
-                shape = RoundedCornerShape(8.dp),
-                modifier = Modifier.weight(1f)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Text(
-                    text = if (isRomanUrdu) "★ Plans / Upgrade" else "★ Plans / Upgrade",
-                    fontSize = 11.sp,
-                    color = Color.Black,
-                    fontWeight = FontWeight.Bold
-                )
+                androidx.compose.material3.OutlinedButton(
+                    onClick = onOpenAdminPortal,
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(
+                        text = if (isRomanUrdu) "⚙ Admin Panel" else "⚙ Admin Panel",
+                        fontSize = 11.sp,
+                        color = TextSecondary
+                    )
+                }
+
+                androidx.compose.material3.OutlinedButton(
+                    onClick = onOpenAbout,
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(
+                        text = if (isRomanUrdu) "ⓘ App Maloomat" else "ⓘ About App",
+                        fontSize = 11.sp,
+                        color = TextSecondary
+                    )
+                }
             }
 
-            Button(
-                onClick = onOpenInfluencerPortal,
-                colors = ButtonDefaults.buttonColors(containerColor = AccentCyan),
-                shape = RoundedCornerShape(8.dp),
-                modifier = Modifier.weight(1f)
-            ) {
-                Text(
-                    text = if (isRomanUrdu) "Influencer Portal" else "Influencer (20%)",
-                    fontSize = 11.sp,
-                    color = Color.Black,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(6.dp))
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            androidx.compose.material3.OutlinedButton(
-                onClick = onOpenAdminPortal,
-                shape = RoundedCornerShape(8.dp),
-                modifier = Modifier.weight(1f)
-            ) {
-                Text(
-                    text = if (isRomanUrdu) "⚙ Admin Panel" else "⚙ Admin Panel",
-                    fontSize = 11.sp,
-                    color = TextSecondary
-                )
-            }
+            Spacer(modifier = Modifier.height(6.dp))
 
             androidx.compose.material3.OutlinedButton(
                 onClick = { onOpenLegal("DISCLAIMER") },
                 shape = RoundedCornerShape(8.dp),
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    text = if (isRomanUrdu) "📜 Legal & Disclaimer" else "📜 Legal / Disclaimer",
+                    fontSize = 11.sp,
+                    color = TextSecondary
+                )
+            }
+        } else {
+            // Ordinary users: ONLY public features (Plans / Upgrade, About App, and Legal / Disclaimer)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Button(
+                    onClick = onOpenSubscription,
+                    colors = ButtonDefaults.buttonColors(containerColor = BullGreen),
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(
+                        text = if (isRomanUrdu) "★ Plans / Upgrade" else "★ Plans / Upgrade",
+                        fontSize = 11.sp,
+                        color = Color.Black,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                androidx.compose.material3.OutlinedButton(
+                    onClick = onOpenAbout,
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(
+                        text = if (isRomanUrdu) "ⓘ App Maloomat" else "ⓘ About App",
+                        fontSize = 11.sp,
+                        color = TextSecondary
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(6.dp))
+
+            androidx.compose.material3.OutlinedButton(
+                onClick = { onOpenLegal("DISCLAIMER") },
+                shape = RoundedCornerShape(8.dp),
+                modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
                     text = if (isRomanUrdu) "📜 Legal & Disclaimer" else "📜 Legal / Disclaimer",
@@ -312,166 +347,31 @@ fun BeginnerGuideScreen(
         }
 
         Spacer(modifier = Modifier.height(24.dp))
-    }
 
-    if (showEditDialog) {
-        var nameInput by remember { mutableStateOf(developerName) }
-        var whatsappInput by remember { mutableStateOf(developerWhatsapp) }
-
-        AlertDialog(
-            onDismissRequest = { showEditDialog = false },
-            title = { Text(if (isRomanUrdu) "Developer Rabta Details" else "Developer Contact Details", color = TextPrimary) },
-            text = {
-                Column {
-                    Text(
-                        if (isRomanUrdu) {
-                            "Developer ka name aur WhatsApp number set karein ta k app me 1-tap chat button kaam kare:"
-                        } else {
-                            "Set your name and WhatsApp number to display inside the app and allow 1-tap WhatsApp chat:"
-                        },
-                        fontSize = 12.sp,
-                        color = TextSecondary
-                    )
-                    Spacer(modifier = Modifier.height(10.dp))
-                    OutlinedTextField(
-                        value = nameInput,
-                        onValueChange = { nameInput = it },
-                        label = { Text("Developer Name") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    Spacer(modifier = Modifier.height(10.dp))
-                    OutlinedTextField(
-                        value = whatsappInput,
-                        onValueChange = { whatsappInput = it },
-                        label = { Text("WhatsApp Number") },
-                        placeholder = { Text("+923360074976") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        onUpdateDeveloperInfo(nameInput, whatsappInput)
-                        showEditDialog = false
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = BullGreen, contentColor = Color.Black)
-                ) {
-                    Text(if (isRomanUrdu) "Mehfooz Karein" else "Save Details", fontWeight = FontWeight.Bold)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showEditDialog = false }) {
-                    Text(if (isRomanUrdu) "Mansookh" else "Cancel", color = TextSecondary)
-                }
-            },
-            containerColor = CryptoSurface
-        )
-    }
-}
-
-@Composable
-private fun DeveloperProfileCard(
-    name: String,
-    whatsapp: String,
-    isRomanUrdu: Boolean,
-    onEditClick: () -> Unit,
-    onChatClick: (String) -> Unit
-) {
-    Card(
-        colors = CardDefaults.cardColors(containerColor = CryptoSurface),
-        shape = RoundedCornerShape(14.dp),
-        modifier = Modifier
-            .fillMaxWidth()
-            .border(1.dp, BullGreen.copy(alpha = 0.4f), RoundedCornerShape(14.dp))
-    ) {
-        Column(modifier = Modifier.padding(14.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        modifier = Modifier
-                            .size(38.dp)
-                            .clip(CircleShape)
-                            .background(BullGreen.copy(alpha = 0.2f)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Person,
-                            contentDescription = "Developer",
-                            tint = BullGreen,
-                            modifier = Modifier.size(22.dp)
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(10.dp))
-                    Column {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                text = name,
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.ExtraBold,
-                                color = TextPrimary
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = "DEVELOPER",
-                                fontSize = 9.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = BullGreen,
-                                modifier = Modifier
-                                    .background(BullGreen.copy(alpha = 0.15f), RoundedCornerShape(4.dp))
-                                    .padding(horizontal = 4.dp, vertical = 2.dp)
-                            )
-                        }
-                        Text(
-                            text = "WhatsApp: $whatsapp",
-                            fontSize = 11.sp,
-                            color = AccentCyan
-                        )
-                    }
-                }
-
-                IconButton(onClick = onEditClick, modifier = Modifier.size(32.dp)) {
-                    Icon(
-                        imageVector = Icons.Default.Edit,
-                        contentDescription = "Edit Developer Info",
-                        tint = TextSecondary,
-                        modifier = Modifier.size(16.dp)
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(10.dp))
-
-            Button(
-                onClick = { onChatClick(whatsapp) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(40.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = BullGreen,
-                    contentColor = Color.Black
-                ),
-                shape = RoundedCornerShape(8.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Phone,
-                    contentDescription = null,
-                    modifier = Modifier.size(16.dp)
-                )
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(
-                    text = if (isRomanUrdu) "WhatsApp per Rabta Karein ($whatsapp)" else "Chat on WhatsApp ($whatsapp)",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 12.sp
-                )
-            }
+        // Subtle About link near the bottom
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { onOpenAbout() }
+                .padding(vertical = 10.dp),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = Icons.Default.Info,
+                contentDescription = null,
+                tint = TextMuted,
+                modifier = Modifier.size(15.dp)
+            )
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(
+                text = if (isRomanUrdu) "Smart Trade AI v1.0.0 • App Maloomat aur Developer Rabta" else "Smart Trade AI v1.0.0 • View About & Developer Support",
+                fontSize = 11.sp,
+                color = TextMuted
+            )
         }
+
+        Spacer(modifier = Modifier.height(14.dp))
     }
 }
 

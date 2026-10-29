@@ -21,6 +21,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
@@ -73,6 +74,8 @@ fun PlanAndConfluenceScreen(
     riskPercent: Double,
     leverage: Int,
     isRomanUrdu: Boolean = false,
+    hasPreciseTargets: Boolean = true,
+    onOpenSubscription: () -> Unit = {},
     onUpdateRisk: (Double, Double, Int) -> Unit,
     onExecutePaperTrade: () -> Unit,
     onSaveSignal: () -> Unit,
@@ -105,7 +108,12 @@ fun PlanAndConfluenceScreen(
         Spacer(modifier = Modifier.height(14.dp))
 
         // 4. Complete Trading Plan
-        TradingPlanDetailsCard(plan = plan, isRomanUrdu = isRomanUrdu)
+        TradingPlanDetailsCard(
+            plan = plan,
+            isRomanUrdu = isRomanUrdu,
+            hasPreciseTargets = hasPreciseTargets,
+            onOpenSubscription = onOpenSubscription
+        )
 
         Spacer(modifier = Modifier.height(14.dp))
 
@@ -441,7 +449,12 @@ private fun MtfBadge(tf: String, trend: TrendDirection) {
 }
 
 @Composable
-private fun TradingPlanDetailsCard(plan: TradingPlan, isRomanUrdu: Boolean = false) {
+private fun TradingPlanDetailsCard(
+    plan: TradingPlan,
+    isRomanUrdu: Boolean = false,
+    hasPreciseTargets: Boolean = true,
+    onOpenSubscription: () -> Unit = {}
+) {
     Card(
         colors = CardDefaults.cardColors(containerColor = CryptoSurface),
         shape = RoundedCornerShape(12.dp),
@@ -468,31 +481,77 @@ private fun TradingPlanDetailsCard(plan: TradingPlan, isRomanUrdu: Boolean = fal
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            PlanMetricRow(
-                label = if (isRomanUrdu) "Dakhla Zone (Suggested Entry)" else "Suggested Entry Zone",
-                value = "$${formatPrice(plan.entryMin)} - $${formatPrice(plan.entryMax)}",
-                color = TextPrimary
-            )
-            PlanMetricRow(
-                label = if (isRomanUrdu) "Stop Loss (Nuqsan se Bachao)" else "Stop Loss (Invalidation)",
-                value = "$${formatPrice(plan.stopLoss)}",
-                color = BearRed
-            )
-            PlanMetricRow(
-                label = if (isRomanUrdu) "Target 1 (Pehla Nafa)" else "Take Profit 1 (1:1.5)",
-                value = "$${formatPrice(plan.tp1)}",
-                color = BullGreen
-            )
-            PlanMetricRow(
-                label = if (isRomanUrdu) "Target 2 (Fibo Golden Pocket)" else "Take Profit 2 (1:2.5 / Fibo)",
-                value = "$${formatPrice(plan.tp2)}",
-                color = BullGreen
-            )
-            PlanMetricRow(
-                label = if (isRomanUrdu) "Target 3 (Runner Nafa)" else "Take Profit 3 (Runner)",
-                value = "$${formatPrice(plan.tp3)}",
-                color = BullGreen
-            )
+            if (!hasPreciseTargets) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(CryptoSurfaceVariant, RoundedCornerShape(8.dp))
+                        .padding(14.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(
+                            imageVector = Icons.Default.Lock,
+                            contentDescription = null,
+                            tint = WarningAmber,
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                            text = if (isRomanUrdu) "Stop Loss aur TP Targets Locked Hain" else "Precision SL & TP Targets Locked",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = TextPrimary
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = if (isRomanUrdu) {
+                                "Exact Stop Loss aur Take Profit targets Silver Pro ya Golden VIP Plan me shamil hain."
+                            } else {
+                                "Exact Stop Loss and Take Profit levels require Silver Pro or Golden VIP Plan."
+                            },
+                            fontSize = 11.sp,
+                            color = TextSecondary,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Button(
+                            onClick = onOpenSubscription,
+                            colors = ButtonDefaults.buttonColors(containerColor = BullGreen),
+                            shape = RoundedCornerShape(6.dp),
+                            modifier = Modifier.height(34.dp)
+                        ) {
+                            Text("Upgrade to Unlock Targets", fontSize = 11.sp, color = Color.Black, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            } else {
+                PlanMetricRow(
+                    label = if (isRomanUrdu) "Dakhla Zone (Suggested Entry)" else "Suggested Entry Zone",
+                    value = "$${formatPrice(plan.entryMin)} - $${formatPrice(plan.entryMax)}",
+                    color = TextPrimary
+                )
+                PlanMetricRow(
+                    label = if (isRomanUrdu) "Stop Loss (Nuqsan se Bachao)" else "Stop Loss (Invalidation)",
+                    value = "$${formatPrice(plan.stopLoss)}",
+                    color = BearRed
+                )
+                PlanMetricRow(
+                    label = if (isRomanUrdu) "Target 1 (Pehla Nafa)" else "Take Profit 1 (1:1.5)",
+                    value = "$${formatPrice(plan.tp1)}",
+                    color = BullGreen
+                )
+                PlanMetricRow(
+                    label = if (isRomanUrdu) "Target 2 (Fibo Golden Pocket)" else "Take Profit 2 (1:2.5 / Fibo)",
+                    value = "$${formatPrice(plan.tp2)}",
+                    color = BullGreen
+                )
+                PlanMetricRow(
+                    label = if (isRomanUrdu) "Target 3 (Runner Nafa)" else "Take Profit 3 (Runner)",
+                    value = "$${formatPrice(plan.tp3)}",
+                    color = BullGreen
+                )
+            }
         }
     }
 }

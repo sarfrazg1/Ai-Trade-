@@ -64,6 +64,15 @@ class SubscriptionManager(private val context: Context) {
         return false
     }
 
+    fun setPendingPlanSelection(plan: SubscriptionPlan) {
+        prefs.edit().putString("pending_plan_id", plan.id).apply()
+    }
+
+    fun getPendingPlanSelection(): SubscriptionPlan? {
+        val id = prefs.getString("pending_plan_id", null) ?: return null
+        return SubscriptionPlan.fromId(id)
+    }
+
     fun recordLegalConsent(disclaimer: Boolean, terms: Boolean) {
         prefs.edit()
             .putBoolean("disclaimer_accepted", disclaimer)
@@ -369,6 +378,23 @@ class SubscriptionManager(private val context: Context) {
         return Result.success("Code $code successfully revoked.")
     }
 
+    fun isValidActivationCodeForUser(code: String?, plan: SubscriptionPlan, userRef: String): Boolean {
+        if (code.isNullOrBlank()) return false
+        val parts = code.trim().uppercase().split("-")
+        if (parts.size != 5 || parts[0] != "STAI") return false
+        val planId = parts[1]
+        val userSuffix = parts[2]
+        val validityPart = parts[3]
+        val signature = parts[4]
+        if (planId != plan.id) return false
+        val expectedSuffix = if (userRef.length >= 4) userRef.takeLast(4) else "0000"
+        if (userSuffix != expectedSuffix) return false
+        val validityDays = validityPart.removeSuffix("D").toIntOrNull() ?: return false
+        val expectedPayload = "${plan.id}:$userSuffix:$validityDays:${userRef}"
+        val expectedSignature = calculateHmacSha256(expectedPayload, hmacSecret).take(8).uppercase(Locale.US)
+        return signature == expectedSignature
+    }
+
     private fun loadSubscriptionState(): UserSubscriptionState {
         val userRef = prefs.getString("user_reference", null) ?: "STAI-USER-100001"
         val planId = prefs.getString("active_plan_id", SubscriptionPlan.FREE_TRIAL.id)
@@ -381,18 +407,40 @@ class SubscriptionManager(private val context: Context) {
         val terms = prefs.getBoolean("terms_accepted", false)
         val consentTime = if (prefs.contains("consent_timestamp")) prefs.getLong("consent_timestamp", 0L) else null
 
-        val plan = SubscriptionPlan.fromId(planId)
-        val status = try {
-            SubscriptionStatus.valueOf(statusStr ?: SubscriptionStatus.TRIAL.name)
-        } catch (_: Exception) {
-            SubscriptionStatus.TRIAL
+        val rawPlan = SubscriptionPlan.fromId(planId)
+        val plan = if (rawPlan != SubscriptionPlan.FREE_TRIAL) {
+            if (isValidActivationCodeForUser(activeCode, rawPlan, userRef)) {
+                rawPlan
+            } else {
+                // Anti-Tampering: Forged local preferences without valid HMAC signature are reverted to Free Trial
+                prefs.edit()
+                    .putString("active_plan_id", SubscriptionPlan.FREE_TRIAL.id)
+                    .putString("subscription_status", SubscriptionStatus.TRIAL.name)
+                    .remove("active_code")
+                    .apply()
+                SubscriptionPlan.FREE_TRIAL
+            }
+        } else {
+            rawPlan
         }
+
+        val status = if (plan == SubscriptionPlan.FREE_TRIAL) {
+            SubscriptionStatus.TRIAL
+        } else {
+            try {
+                SubscriptionStatus.valueOf(statusStr ?: SubscriptionStatus.TRIAL.name)
+            } catch (_: Exception) {
+                SubscriptionStatus.TRIAL
+            }
+        }
+
+        val effectiveCode = if (plan == SubscriptionPlan.FREE_TRIAL) null else activeCode
 
         return UserSubscriptionState(
             userReference = userRef,
             currentPlan = plan,
             status = status,
-            activationCode = activeCode,
+            activationCode = effectiveCode,
             activatedAt = activatedAt,
             expiresAt = expiresAt,
             referralCode = referral,

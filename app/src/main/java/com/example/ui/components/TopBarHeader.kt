@@ -355,15 +355,15 @@ fun TopBarHeader(
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(4.dp))
-                                .background(BullGreen.copy(alpha = 0.15f))
+                                .background(CryptoSurfaceVariant)
                                 .clickable { onDeveloperClick() }
-                                .padding(horizontal = 5.dp, vertical = 2.dp)
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
                         ) {
                             Text(
-                                text = "Dev: Rao Sarfraz",
+                                text = "ⓘ About",
                                 fontSize = 9.sp,
                                 fontWeight = FontWeight.SemiBold,
-                                color = BullGreen
+                                color = TextSecondary
                             )
                         }
                     }

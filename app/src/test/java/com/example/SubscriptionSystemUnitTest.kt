@@ -139,4 +139,96 @@ class SubscriptionSystemUnitTest {
         assertEquals(CommissionStatus.REVERSED, updated.status)
         assertTrue(updated.notes?.contains("Customer refund request") == true)
     }
+
+    @Test
+    fun testDirectPreferencesTamperingRevertedToFree() {
+        val prefs = context.getSharedPreferences("stai_subscription_vault", Context.MODE_PRIVATE)
+        // Simulate malicious user directly altering local preferences to forge a GOLDEN subscription
+        prefs.edit()
+            .putString("active_plan_id", "GOLD")
+            .putString("subscription_status", "ACTIVE")
+            .putString("active_code", "FAKE_FORGED_CODE_123")
+            .commit()
+
+        val secureManager = SubscriptionManager(context)
+        val state = secureManager.subscriptionState.value
+        assertEquals("Locally forged paid plan without valid HMAC signature must be reverted to Free Trial", SubscriptionPlan.FREE_TRIAL, state.currentPlan)
+        assertEquals(SubscriptionStatus.TRIAL, state.status)
+    }
+
+    @Test
+    fun testAdminRoleEmailVerification() {
+        val adminEmail = com.example.ui.viewmodel.TradingViewModel.ADMIN_EMAIL
+        assertEquals("sarfarazmech00@gmail.com", adminEmail)
+
+        val isOwnerAdmin = "sarfarazmech00@gmail.com".equals(adminEmail, ignoreCase = true)
+        val isOrdinaryUserAdmin = "randomuser@gmail.com".equals(adminEmail, ignoreCase = true)
+
+        assertTrue("sarfarazmech00@gmail.com must be recognized as verified administrator", isOwnerAdmin)
+        assertFalse("Ordinary user emails must NOT be recognized as administrator", isOrdinaryUserAdmin)
+    }
+
+    @Test
+    fun testPendingPaidPlanRemainsInactiveUntilVerified() {
+        val userRef = subscriptionManager.getUserReference()
+        // User selects Golden in onboarding
+        subscriptionManager.setPendingPlanSelection(SubscriptionPlan.GOLDEN)
+        val pending = subscriptionManager.getPendingPlanSelection()
+        assertEquals(SubscriptionPlan.GOLDEN, pending)
+
+        // But actual subscription status must remain FREE/TRIAL and unactivated
+        val state = subscriptionManager.subscriptionState.value
+        assertFalse("Selecting a paid plan must NOT grant immediate active privileges", state.isPrivilegedActive)
+        assertEquals(SubscriptionPlan.FREE_TRIAL, state.currentPlan)
+        assertFalse(state.hasAccessTo(com.example.domain.model.AppFeature.SMC_ADVANCED_OVERLAYS))
+    }
+
+    @Test
+    fun testPlanFeatureAccessMatrix() {
+        val userRef = subscriptionManager.getUserReference()
+
+        // 1. Free Trial State
+        val freeState = subscriptionManager.subscriptionState.value
+        assertFalse(freeState.hasAccessTo(com.example.domain.model.AppFeature.SMC_ADVANCED_OVERLAYS))
+        assertFalse(freeState.hasAccessTo(com.example.domain.model.AppFeature.VIP_SIGNALS_5M_1D))
+        assertFalse(freeState.hasAccessTo(com.example.domain.model.AppFeature.PRECISE_TP_SL_TARGETS))
+        assertFalse(freeState.hasAccessTo(com.example.domain.model.AppFeature.FUTURES_ANALYTICS_OVERVIEW))
+
+        // 2. Activate Bronze
+        val bronzeCode = subscriptionManager.generateActivationCode(userRef, SubscriptionPlan.BRONZE, 30)
+        subscriptionManager.redeemActivationCode(bronzeCode)
+        val bronzeState = subscriptionManager.subscriptionState.value
+        assertTrue(bronzeState.hasAccessTo(com.example.domain.model.AppFeature.FUTURES_ANALYTICS_OVERVIEW))
+        assertFalse(bronzeState.hasAccessTo(com.example.domain.model.AppFeature.PRECISE_TP_SL_TARGETS))
+        assertFalse(bronzeState.hasAccessTo(com.example.domain.model.AppFeature.SMC_ADVANCED_OVERLAYS))
+
+        // 3. Clear and Activate Silver
+        context.getSharedPreferences("stai_subscription_vault", Context.MODE_PRIVATE).edit().clear().commit()
+        val silverManager = SubscriptionManager(context)
+        val sUserRef = silverManager.getUserReference()
+        val silverCode = silverManager.generateActivationCode(sUserRef, SubscriptionPlan.SILVER, 30)
+        silverManager.redeemActivationCode(silverCode)
+        val silverState = silverManager.subscriptionState.value
+        assertTrue(silverState.hasAccessTo(com.example.domain.model.AppFeature.FUTURES_ANALYTICS_OVERVIEW))
+        assertTrue(silverState.hasAccessTo(com.example.domain.model.AppFeature.PRECISE_TP_SL_TARGETS))
+        assertTrue(silverState.hasAccessTo(com.example.domain.model.AppFeature.PAPER_TRADING_FULL))
+        assertFalse(silverState.hasAccessTo(com.example.domain.model.AppFeature.SMC_ADVANCED_OVERLAYS))
+        assertFalse(silverState.hasAccessTo(com.example.domain.model.AppFeature.VIP_SIGNALS_5M_1D))
+
+        // 4. Clear and Activate Golden
+        context.getSharedPreferences("stai_subscription_vault", Context.MODE_PRIVATE).edit().clear().commit()
+        val goldenManager = SubscriptionManager(context)
+        val gUserRef = goldenManager.getUserReference()
+        val goldenCode = goldenManager.generateActivationCode(gUserRef, SubscriptionPlan.GOLDEN, 30)
+        goldenManager.redeemActivationCode(goldenCode)
+        val goldenState = goldenManager.subscriptionState.value
+        assertTrue(goldenState.hasAccessTo(com.example.domain.model.AppFeature.FUTURES_ANALYTICS_OVERVIEW))
+        assertTrue(goldenState.hasAccessTo(com.example.domain.model.AppFeature.PRECISE_TP_SL_TARGETS))
+        assertTrue(goldenState.hasAccessTo(com.example.domain.model.AppFeature.PAPER_TRADING_FULL))
+        assertTrue(goldenState.hasAccessTo(com.example.domain.model.AppFeature.SMC_ADVANCED_OVERLAYS))
+        assertTrue(goldenState.hasAccessTo(com.example.domain.model.AppFeature.VIP_SIGNALS_5M_1D))
+
+        // 5. Admin bypass test
+        assertTrue("Admin must have test access to all features", freeState.hasAccessTo(com.example.domain.model.AppFeature.SMC_ADVANCED_OVERLAYS, isAdmin = true))
+    }
 }

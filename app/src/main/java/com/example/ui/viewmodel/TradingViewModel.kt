@@ -13,7 +13,9 @@ import com.example.data.repository.BacktestSummary
 import com.example.data.repository.CompleteAnalysisResult
 import com.example.data.repository.CryptoTradingRepository
 import com.example.data.repository.DefaultMarketSnapshot
+import com.example.domain.model.AppFeature
 import com.example.domain.model.SignalType
+import com.example.domain.model.SubscriptionPlan
 import com.example.domain.model.Timeframe
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -46,7 +48,9 @@ data class TradingUiState(
     val showDeveloperDialog: Boolean = false,
     val isRomanUrdu: Boolean = false,
     // Subscription & Modals
+    val showOnboardingModal: Boolean = false,
     val showSubscriptionModal: Boolean = false,
+    val showAboutModal: Boolean = false,
     val showAdminModal: Boolean = false,
     val showInfluencerModal: Boolean = false,
     val showLegalModal: Boolean = false,
@@ -55,11 +59,16 @@ data class TradingUiState(
     val googleUserEmail: String? = null,
     val googleDisplayName: String? = null,
     val isGoogleSignedIn: Boolean = false,
+    val isUserAdmin: Boolean = false,
     val isCloudSyncing: Boolean = false,
     val lastCloudSyncTimestamp: Long? = null
 )
 
 class TradingViewModel(application: Application) : AndroidViewModel(application) {
+
+    companion object {
+        const val ADMIN_EMAIL = "sarfarazmech00@gmail.com"
+    }
 
     private val prefs = application.getSharedPreferences("smart_trade_prefs", Application.MODE_PRIVATE)
 
@@ -83,8 +92,8 @@ class TradingViewModel(application: Application) : AndroidViewModel(application)
             developerName = prefs.getString("dev_name", "Rao Muhammad Sarfraz") ?: "Rao Muhammad Sarfraz",
             developerWhatsapp = prefs.getString("dev_whatsapp", "+923360074976") ?: "+923360074976",
             isRomanUrdu = prefs.getBoolean("is_roman_urdu", false),
-            // Default to false so emulator preview and app open immediately to interactive charts & signals
-            showSubscriptionModal = false
+            showSubscriptionModal = false,
+            showOnboardingModal = !prefs.getBoolean("has_completed_onboarding", false) && !subscriptionManager.subscriptionState.value.isPrivilegedActive
         )
     )
     val uiState: StateFlow<TradingUiState> = _uiState.asStateFlow()
@@ -105,10 +114,12 @@ class TradingViewModel(application: Application) : AndroidViewModel(application)
         }
         viewModelScope.launch {
             googleAuthManager.currentUser.collect { user ->
+                val isAdmin = user?.email?.equals(ADMIN_EMAIL, ignoreCase = true) == true
                 _uiState.value = _uiState.value.copy(
                     googleUserEmail = user?.email,
                     googleDisplayName = user?.displayName,
-                    isGoogleSignedIn = user != null
+                    isGoogleSignedIn = user != null,
+                    isUserAdmin = isAdmin
                 )
                 if (user != null) {
                     firestoreSyncRepository.syncUserProfile(user, subscriptionState.value)
@@ -130,6 +141,13 @@ class TradingViewModel(application: Application) : AndroidViewModel(application)
     }
 
     fun selectTimeframe(tf: Timeframe) {
+        val hasVip = subscriptionState.value.hasAccessTo(AppFeature.VIP_SIGNALS_5M_1D, _uiState.value.isUserAdmin)
+        if (!hasVip && (tf == Timeframe.FIVE_MIN || tf == Timeframe.DAILY)) {
+            _uiState.value = _uiState.value.copy(
+                userNotification = "Timeframe ${tf.label} is exclusive to Golden VIP Plan. Tap Upgrade to activate."
+            )
+            return
+        }
         if (tf != _uiState.value.selectedTimeframe) {
             _uiState.value = _uiState.value.copy(selectedTimeframe = tf)
             loadCurrentPair()
@@ -157,6 +175,13 @@ class TradingViewModel(application: Application) : AndroidViewModel(application)
 
     fun toggleOverlay(overlay: String) {
         val s = _uiState.value
+        val hasSmc = subscriptionState.value.hasAccessTo(AppFeature.SMC_ADVANCED_OVERLAYS, s.isUserAdmin)
+        if (!hasSmc && (overlay == "ORDER_BLOCKS" || overlay == "FVG" || overlay == "BOS")) {
+            _uiState.value = s.copy(
+                userNotification = "Smart Money Concepts ($overlay) require Golden VIP Plan. Tap Upgrade to activate."
+            )
+            return
+        }
         _uiState.value = when (overlay) {
             "EMA" -> s.copy(showEma = !s.showEma)
             "BOLLINGER" -> s.copy(showBollinger = !s.showBollinger)
@@ -239,10 +264,22 @@ class TradingViewModel(application: Application) : AndroidViewModel(application)
     }
 
     fun toggleDeveloperDialog(show: Boolean) {
+        if (show && !_uiState.value.isUserAdmin) {
+            _uiState.value = _uiState.value.copy(
+                userNotification = "Developer settings are restricted to verified administrator ($ADMIN_EMAIL)."
+            )
+            return
+        }
         _uiState.value = _uiState.value.copy(showDeveloperDialog = show)
     }
 
     fun updateDeveloperInfo(name: String, whatsapp: String) {
+        if (!_uiState.value.isUserAdmin) {
+            _uiState.value = _uiState.value.copy(
+                userNotification = "Access Denied: Only administrator ($ADMIN_EMAIL) can modify developer details."
+            )
+            return
+        }
         val cleanName = name.trim().ifEmpty { "Sarfaraz" }
         val cleanWhatsapp = whatsapp.trim()
         prefs.edit()
@@ -298,6 +335,26 @@ class TradingViewModel(application: Application) : AndroidViewModel(application)
         _uiState.value = _uiState.value.copy(backtestSummary = summary)
     }
 
+    fun completeOnboarding(selectedPlan: SubscriptionPlan) {
+        prefs.edit().putBoolean("has_completed_onboarding", true).apply()
+        _uiState.value = _uiState.value.copy(showOnboardingModal = false)
+        if (selectedPlan != SubscriptionPlan.FREE_TRIAL) {
+            subscriptionManager.setPendingPlanSelection(selectedPlan)
+            _uiState.value = _uiState.value.copy(
+                showSubscriptionModal = true,
+                userNotification = "Selected ${selectedPlan.title}. Please submit payment reference or enter activation code."
+            )
+        } else {
+            _uiState.value = _uiState.value.copy(
+                userNotification = "Welcome to Smart Trade AI! Free demo mode activated."
+            )
+        }
+    }
+
+    fun openAboutModal(show: Boolean) {
+        _uiState.value = _uiState.value.copy(showAboutModal = show)
+    }
+
     fun openSubscriptionModal(show: Boolean) {
         if (!show) {
             prefs.edit().putBoolean("has_seen_welcome_screen", true).apply()
@@ -310,6 +367,12 @@ class TradingViewModel(application: Application) : AndroidViewModel(application)
     }
 
     fun openInfluencerModal(show: Boolean) {
+        if (show && !_uiState.value.isUserAdmin) {
+            _uiState.value = _uiState.value.copy(
+                userNotification = "Access Denied: Influencer management is restricted to authorized administrator."
+            )
+            return
+        }
         _uiState.value = _uiState.value.copy(showInfluencerModal = show)
     }
 
@@ -412,6 +475,12 @@ class TradingViewModel(application: Application) : AndroidViewModel(application)
         validityDays: Int = 30,
         paymentRef: String = "MANUAL_VERIFIED"
     ) {
+        if (!_uiState.value.isUserAdmin) {
+            _uiState.value = _uiState.value.copy(
+                userNotification = "Access Denied: Only verified admin ($ADMIN_EMAIL) can issue activation codes."
+            )
+            return
+        }
         viewModelScope.launch {
             firestoreSyncRepository.adminIssueCodeCloud(
                 code = code,

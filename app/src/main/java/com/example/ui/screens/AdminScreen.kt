@@ -79,6 +79,9 @@ import java.util.Locale
 @Composable
 fun AdminScreen(
     subscriptionManager: SubscriptionManager,
+    isUserAdmin: Boolean = false,
+    adminEmail: String? = null,
+    onSignInAdmin: () -> Unit = {},
     onClose: () -> Unit,
     onPublishCodeCloud: (code: String, targetUserRef: String, plan: String, validityDays: Int, paymentRef: String) -> Unit = { _, _, _, _, _ -> },
     modifier: Modifier = Modifier
@@ -88,6 +91,96 @@ fun AdminScreen(
     var pinError by remember { mutableStateOf<String?>(null) }
     val correctPin = "74976" // Default secure PIN
 
+    // Gate 1: Check verified administrator identity
+    if (!isUserAdmin) {
+        Box(
+            modifier = modifier
+                .fillMaxSize()
+                .background(CryptoBackground),
+            contentAlignment = Alignment.Center
+        ) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(24.dp),
+                colors = CardDefaults.cardColors(containerColor = CryptoSurface),
+                shape = RoundedCornerShape(16.dp),
+                border = androidx.compose.foundation.BorderStroke(1.dp, BearRed.copy(alpha = 0.5f))
+            ) {
+                Column(
+                    modifier = Modifier.padding(20.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Shield,
+                        contentDescription = "Access Restricted",
+                        tint = BearRed,
+                        modifier = Modifier.size(48.dp)
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        text = "Access Restricted",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = "This Administrative Console is restricted exclusively to the verified application owner account:\nsarfarazmech00@gmail.com",
+                        fontSize = 12.sp,
+                        color = TextSecondary,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    )
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(CryptoSurfaceVariant, RoundedCornerShape(8.dp))
+                            .padding(10.dp)
+                    ) {
+                        Text(
+                            text = if (!adminEmail.isNullOrBlank()) {
+                                "Currently signed in as:\n$adminEmail (Not Administrator)"
+                            } else {
+                                "Currently: Not signed in"
+                            },
+                            fontSize = 11.sp,
+                            color = WarningAmber,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Button(
+                            onClick = onClose,
+                            colors = ButtonDefaults.buttonColors(containerColor = CryptoSurfaceVariant),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("Back to App", color = TextPrimary)
+                        }
+
+                        Button(
+                            onClick = onSignInAdmin,
+                            colors = ButtonDefaults.buttonColors(containerColor = BullGreen),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("Sign In Admin", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                        }
+                    }
+                }
+            }
+        }
+        return
+    }
+
+    // Gate 2: Secondary PIN verification for authorized administrator
     if (!isAuthenticated) {
         Box(
             modifier = modifier
@@ -121,7 +214,7 @@ fun AdminScreen(
                         color = TextPrimary
                     )
                     Text(
-                        text = "Only authorized administrators may verify payments and generate activation keys.",
+                        text = "Verified Admin: $adminEmail\nEnter secondary PIN to unlock management tools.",
                         fontSize = 11.sp,
                         color = TextMuted,
                         textAlign = androidx.compose.ui.text.style.TextAlign.Center
@@ -162,13 +255,13 @@ fun AdminScreen(
                                     isAuthenticated = true
                                     pinError = null
                                 } else {
-                                    pinError = "Incorrect PIN. Default admin PIN: 74976"
+                                    pinError = "Incorrect PIN."
                                 }
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = BullGreen),
                             modifier = Modifier.testTag("admin_login_button")
                         ) {
-                            Text("Login", color = Color.Black, fontWeight = FontWeight.Bold)
+                            Text("Unlock", color = Color.Black, fontWeight = FontWeight.Bold)
                         }
                     }
                 }

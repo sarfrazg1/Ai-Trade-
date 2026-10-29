@@ -117,7 +117,7 @@ fun SmartTradeApp(viewModel: TradingViewModel) {
                 isSubscribed = subscriptionState.isPrivilegedActive,
                 onSubscriptionClick = { viewModel.openSubscriptionModal(true) },
                 onToggleLanguage = { viewModel.toggleLanguage() },
-                onDeveloperClick = { viewModel.selectTab(5) },
+                onDeveloperClick = { viewModel.openAboutModal(true) },
                 onSymbolSelected = { viewModel.selectPair(it) },
                 onTimeframeSelected = { viewModel.selectTimeframe(it) },
                 onRefresh = { viewModel.refreshData() },
@@ -235,6 +235,8 @@ fun SmartTradeApp(viewModel: TradingViewModel) {
                         riskPercent = uiState.riskPercent,
                         leverage = uiState.leverage,
                         isRomanUrdu = uiState.isRomanUrdu,
+                        hasPreciseTargets = subscriptionState.hasAccessTo(com.example.domain.model.AppFeature.PRECISE_TP_SL_TARGETS, uiState.isUserAdmin),
+                        onOpenSubscription = { viewModel.openSubscriptionModal(true) },
                         onUpdateRisk = { b, r, l -> viewModel.updateRiskSettings(b, r, l) },
                         onExecutePaperTrade = { viewModel.executePaperTrade() },
                         onSaveSignal = { viewModel.saveCurrentSignal() }
@@ -265,7 +267,9 @@ fun SmartTradeApp(viewModel: TradingViewModel) {
                     3 -> FuturesAnalyticsScreen(
                         stats = analysis.futuresStats,
                         smc = analysis.smc,
-                        currentPrice = livePrice
+                        currentPrice = livePrice,
+                        hasFuturesAccess = subscriptionState.hasAccessTo(com.example.domain.model.AppFeature.FUTURES_ANALYTICS_OVERVIEW, uiState.isUserAdmin),
+                        onOpenSubscription = { viewModel.openSubscriptionModal(true) }
                     )
                     4 -> PaperTradingScreen(
                         paperTrades = paperTrades,
@@ -279,14 +283,13 @@ fun SmartTradeApp(viewModel: TradingViewModel) {
                         onRunBacktest = { viewModel.runBacktest() }
                     )
                     5 -> BeginnerGuideScreen(
-                        developerName = uiState.developerName,
-                        developerWhatsapp = uiState.developerWhatsapp,
                         isRomanUrdu = uiState.isRomanUrdu,
-                        onUpdateDeveloperInfo = { name, wa -> viewModel.updateDeveloperInfo(name, wa) },
+                        isAdmin = uiState.isUserAdmin,
                         onOpenSubscription = { viewModel.openSubscriptionModal(true) },
                         onOpenInfluencerPortal = { viewModel.openInfluencerModal(true) },
                         onOpenAdminPortal = { viewModel.openAdminModal(true) },
-                        onOpenLegal = { viewModel.openLegalModal(it) }
+                        onOpenLegal = { viewModel.openLegalModal(it) },
+                        onOpenAbout = { viewModel.openAboutModal(true) }
                     )
                 }
             } else {
@@ -325,8 +328,34 @@ fun SmartTradeApp(viewModel: TradingViewModel) {
                 }
             }
 
-            // Subscription & Plans Modal
-            if (uiState.showSubscriptionModal) {
+            // 1. First-Launch Welcome Onboarding Modal
+            if (uiState.showOnboardingModal) {
+                com.example.ui.screens.WelcomeOnboardingScreen(
+                    onSelectPlanAndContinue = { selectedPlan ->
+                        viewModel.completeOnboarding(selectedPlan)
+                    },
+                    onOpenLegal = { viewModel.openLegalModal(it) }
+                )
+            } else if (uiState.showAboutModal) {
+                BackHandler { viewModel.openAboutModal(false) }
+                com.example.ui.screens.AboutScreen(
+                    developerName = uiState.developerName,
+                    developerWhatsapp = uiState.developerWhatsapp,
+                    isRomanUrdu = uiState.isRomanUrdu,
+                    isAdmin = uiState.isUserAdmin,
+                    onClose = { viewModel.openAboutModal(false) },
+                    onOpenSubscription = {
+                        viewModel.openAboutModal(false)
+                        viewModel.openSubscriptionModal(true)
+                    },
+                    onOpenLegal = { viewModel.openLegalModal(it) },
+                    onOpenAdmin = {
+                        viewModel.openAboutModal(false)
+                        viewModel.openAdminModal(true)
+                    },
+                    onUpdateDeveloperInfo = { name, wa -> viewModel.updateDeveloperInfo(name, wa) }
+                )
+            } else if (uiState.showSubscriptionModal) {
                 BackHandler { viewModel.openSubscriptionModal(false) }
                 com.example.ui.screens.SubscriptionScreen(
                     subscriptionState = subscriptionState,
@@ -342,12 +371,16 @@ fun SmartTradeApp(viewModel: TradingViewModel) {
                     onSubmitPaymentProof = { plan, trx -> viewModel.submitPaymentVerification(plan, trx) },
                     onClose = { viewModel.openSubscriptionModal(false) },
                     onOpenLegalPage = { viewModel.openLegalModal(it) },
-                    onOpenAdminPortal = { viewModel.openAdminModal(true) }
+                    onOpenAdminPortal = { viewModel.openAdminModal(true) },
+                    isAdmin = uiState.isUserAdmin
                 )
             } else if (uiState.showAdminModal) {
                 BackHandler { viewModel.openAdminModal(false) }
                 com.example.ui.screens.AdminScreen(
                     subscriptionManager = viewModel.subscriptionManager,
+                    isUserAdmin = uiState.isUserAdmin,
+                    adminEmail = uiState.googleUserEmail,
+                    onSignInAdmin = { viewModel.signInWithGoogle() },
                     onPublishCodeCloud = { code, userRef, plan, days, paymentRef ->
                         viewModel.adminPublishCodeToCloud(code, userRef, plan, days, paymentRef)
                     },

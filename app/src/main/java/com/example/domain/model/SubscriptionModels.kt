@@ -105,6 +105,26 @@ data class UserSubscriptionState(
             val diff = exp - System.currentTimeMillis()
             return if (diff > 0) (diff / (1000L * 60 * 60 * 24)).toInt() else 0
         }
+
+    fun hasAccessTo(feature: AppFeature, isAdmin: Boolean = false): Boolean {
+        if (isAdmin) return true // Authorized administrator test access
+        if (!isPrivilegedActive) return false
+        return when (feature.minPlan) {
+            SubscriptionPlan.FREE_TRIAL -> true
+            SubscriptionPlan.BRONZE -> currentPlan == SubscriptionPlan.BRONZE || currentPlan == SubscriptionPlan.SILVER || currentPlan == SubscriptionPlan.GOLDEN
+            SubscriptionPlan.SILVER -> currentPlan == SubscriptionPlan.SILVER || currentPlan == SubscriptionPlan.GOLDEN
+            SubscriptionPlan.GOLDEN -> currentPlan == SubscriptionPlan.GOLDEN
+        }
+    }
+}
+
+enum class AppFeature(val minPlan: SubscriptionPlan, val description: String) {
+    VIP_SIGNALS_5M_1D(SubscriptionPlan.GOLDEN, "5M & 1D Real-Time Signals require the Golden VIP Plan."),
+    SMC_ADVANCED_OVERLAYS(SubscriptionPlan.GOLDEN, "Smart Money Concepts Overlays (Order Blocks, FVG, BOS) require the Golden VIP Plan."),
+    PRECISE_TP_SL_TARGETS(SubscriptionPlan.SILVER, "Precise Entry, Stop Loss & TP targets require the Silver Pro or Golden VIP Plan."),
+    TECHNICAL_INDICATORS_DETAILED(SubscriptionPlan.SILVER, "Detailed technical indicators breakdown requires the Silver Pro or Golden VIP Plan."),
+    FUTURES_ANALYTICS_OVERVIEW(SubscriptionPlan.BRONZE, "Futures market analytics and funding rates require the Bronze Basic Plan or higher."),
+    PAPER_TRADING_FULL(SubscriptionPlan.SILVER, "Multi-trade paper execution and tracking requires the Silver Pro or Golden VIP Plan.")
 }
 
 data class ActivationCodeRecord(

@@ -17,6 +17,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -52,6 +53,8 @@ fun FuturesAnalyticsScreen(
     stats: FuturesStats?,
     smc: SmartMoneyConcepts,
     currentPrice: Double,
+    hasFuturesAccess: Boolean = true,
+    onOpenSubscription: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -86,23 +89,61 @@ fun FuturesAnalyticsScreen(
                 }
             }
         } else {
-            // 1. Funding Rate Card
+            // 1. Funding Rate Card (Public preview)
             FundingRateCard(stats = stats)
 
-            Spacer(modifier = Modifier.height(12.dp))
+            if (!hasFuturesAccess) {
+                Spacer(modifier = Modifier.height(12.dp))
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = CryptoSurface),
+                    shape = RoundedCornerShape(12.dp),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, CryptoCardBorder)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Icon(imageVector = Icons.Default.Lock, contentDescription = null, tint = WarningAmber, modifier = Modifier.size(24.dp))
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                            text = "Derivatives Analytics Locked",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = TextPrimary
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "Open Interest, Long/Short Account positioning, and Liquidity Pools require Bronze Basic Plan (PKR 1,000) or higher.",
+                            fontSize = 11.sp,
+                            color = TextSecondary,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        )
+                        Spacer(modifier = Modifier.height(10.dp))
+                        androidx.compose.material3.Button(
+                            onClick = onOpenSubscription,
+                            colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = BullGreen)
+                        ) {
+                            Text("Upgrade to Bronze (PKR 1,000)", fontSize = 11.sp, color = Color.Black, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            } else {
+                Spacer(modifier = Modifier.height(12.dp))
 
-            // 2. Open Interest & 24h Ticker Stats
-            OpenInterestCard(stats = stats)
+                // 2. Open Interest & 24h Ticker Stats
+                OpenInterestCard(stats = stats)
 
-            Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(12.dp))
 
-            // 3. Long / Short Account Ratio
-            LongShortRatioCard(ratio = stats.longShortRatio)
+                // 3. Long / Short Account Ratio
+                LongShortRatioCard(ratio = stats.longShortRatio)
 
-            Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(12.dp))
 
-            // 4. Structural Liquidity Pools (Equal Highs & Equal Lows)
-            LiquidityPoolsCard(smc = smc, currentPrice = currentPrice)
+                // 4. Structural Liquidity Pools (Equal Highs & Equal Lows)
+                LiquidityPoolsCard(smc = smc, currentPrice = currentPrice)
+            }
 
             Spacer(modifier = Modifier.height(12.dp))
 
