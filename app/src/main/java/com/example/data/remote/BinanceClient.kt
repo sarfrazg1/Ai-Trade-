@@ -336,4 +336,139 @@ class BinanceClient {
             null
         }
     }
+
+    suspend fun fetchLivePrice(symbol: String): Double? = withContext(Dispatchers.IO) {
+        val clean = symbol.uppercase().trim()
+        val prices = fetchLivePrices(setOf(clean))
+        prices[clean]
+    }
+
+    suspend fun fetchLivePrices(symbols: Set<String>): Map<String, Double> = withContext(Dispatchers.IO) {
+        if (symbols.isEmpty()) return@withContext emptyMap()
+        val cleanSymbols = symbols.map { it.uppercase().trim() }.filter { it.isNotEmpty() }.toSet()
+
+        // 1. Try Binance Futures Ticker Price
+        val futuresPrices = tryFetchBinanceFuturesPrices(cleanSymbols)
+        if (futuresPrices.isNotEmpty()) return@withContext futuresPrices
+
+        // 2. Try Binance Vision Ticker Price (Spot mirror, unblocked globally)
+        val visionPrices = tryFetchBinanceVisionPrices(cleanSymbols)
+        if (visionPrices.isNotEmpty()) return@withContext visionPrices
+
+        // 3. Try Bybit Linear Tickers
+        val bybitPrices = tryFetchBybitPrices(cleanSymbols)
+        if (bybitPrices.isNotEmpty()) return@withContext bybitPrices
+
+        emptyMap()
+    }
+
+    private fun tryFetchBinanceFuturesPrices(symbols: Set<String>): Map<String, Double> {
+        return try {
+            val url = if (symbols.size == 1) {
+                "https://fapi.binance.com/fapi/v1/ticker/price?symbol=${symbols.first()}"
+            } else {
+                "https://fapi.binance.com/fapi/v1/ticker/price"
+            }
+            val req = Request.Builder()
+                .url(url)
+                .header("User-Agent", userAgent)
+                .header("Accept", "application/json")
+                .header("Cache-Control", "no-cache")
+                .build()
+            val res = client.newCall(req).execute()
+            if (!res.isSuccessful) return emptyMap()
+            val body = res.body?.string() ?: return emptyMap()
+
+            val resultMap = HashMap<String, Double>()
+            if (body.trimStart().startsWith("{")) {
+                val obj = JSONObject(body)
+                val sym = obj.optString("symbol").uppercase()
+                val price = obj.optString("price", "0.0").toDoubleOrNull() ?: 0.0
+                if (price > 0.0) resultMap[sym] = price
+            } else if (body.trimStart().startsWith("[")) {
+                val arr = JSONArray(body)
+                for (i in 0 until arr.length()) {
+                    val obj = arr.getJSONObject(i)
+                    val sym = obj.optString("symbol").uppercase()
+                    if (symbols.contains(sym)) {
+                        val price = obj.optString("price", "0.0").toDoubleOrNull() ?: 0.0
+                        if (price > 0.0) resultMap[sym] = price
+                    }
+                }
+            }
+            resultMap
+        } catch (_: Exception) {
+            emptyMap()
+        }
+    }
+
+    private fun tryFetchBinanceVisionPrices(symbols: Set<String>): Map<String, Double> {
+        return try {
+            val url = if (symbols.size == 1) {
+                "https://data-api.binance.vision/api/v3/ticker/price?symbol=${symbols.first()}"
+            } else {
+                "https://data-api.binance.vision/api/v3/ticker/price"
+            }
+            val req = Request.Builder()
+                .url(url)
+                .header("User-Agent", userAgent)
+                .header("Accept", "application/json")
+                .header("Cache-Control", "no-cache")
+                .build()
+            val res = client.newCall(req).execute()
+            if (!res.isSuccessful) return emptyMap()
+            val body = res.body?.string() ?: return emptyMap()
+
+            val resultMap = HashMap<String, Double>()
+            if (body.trimStart().startsWith("{")) {
+                val obj = JSONObject(body)
+                val sym = obj.optString("symbol").uppercase()
+                val price = obj.optString("price", "0.0").toDoubleOrNull() ?: 0.0
+                if (price > 0.0) resultMap[sym] = price
+            } else if (body.trimStart().startsWith("[")) {
+                val arr = JSONArray(body)
+                for (i in 0 until arr.length()) {
+                    val obj = arr.getJSONObject(i)
+                    val sym = obj.optString("symbol").uppercase()
+                    if (symbols.contains(sym)) {
+                        val price = obj.optString("price", "0.0").toDoubleOrNull() ?: 0.0
+                        if (price > 0.0) resultMap[sym] = price
+                    }
+                }
+            }
+            resultMap
+        } catch (_: Exception) {
+            emptyMap()
+        }
+    }
+
+    private fun tryFetchBybitPrices(symbols: Set<String>): Map<String, Double> {
+        return try {
+            val url = "https://api.bybit.com/v5/market/tickers?category=linear"
+            val req = Request.Builder()
+                .url(url)
+                .header("User-Agent", userAgent)
+                .header("Accept", "application/json")
+                .build()
+            val res = client.newCall(req).execute()
+            if (!res.isSuccessful) return emptyMap()
+            val body = res.body?.string() ?: return emptyMap()
+            val root = JSONObject(body)
+            val resultObj = root.optJSONObject("result") ?: return emptyMap()
+            val list = resultObj.optJSONArray("list") ?: return emptyMap()
+
+            val resultMap = HashMap<String, Double>()
+            for (i in 0 until list.length()) {
+                val item = list.getJSONObject(i)
+                val sym = item.optString("symbol").uppercase()
+                if (symbols.contains(sym)) {
+                    val price = item.optString("lastPrice", "0.0").toDoubleOrNull() ?: 0.0
+                    if (price > 0.0) resultMap[sym] = price
+                }
+            }
+            resultMap
+        } catch (_: Exception) {
+            emptyMap()
+        }
+    }
 }

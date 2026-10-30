@@ -60,14 +60,19 @@ class GoogleAuthManager(private val context: Context) {
     }
 
     suspend fun signInWithGoogle(launcherContext: Context? = null): Result<FirebaseUser> {
-        val targetContext = launcherContext ?: context
-        val activityContext = findActivity(targetContext) ?: targetContext
+        val resolvedActivity = (launcherContext as? Activity)
+            ?: (launcherContext?.let { findActivity(it) })
+            ?: (context as? Activity)
+            ?: findActivity(context)
+
+        val targetContext = resolvedActivity ?: launcherContext ?: context
+
         return try {
-            val resId = activityContext.resources.getIdentifier("default_web_client_id", "string", activityContext.packageName)
+            val resId = targetContext.resources.getIdentifier("default_web_client_id", "string", targetContext.packageName)
             val webClientId = if (resId != 0) {
-                activityContext.getString(resId)
+                targetContext.getString(resId)
             } else {
-                activityContext.getString(R.string.default_web_client_id)
+                targetContext.getString(R.string.default_web_client_id)
             }
             val signInOption = GetSignInWithGoogleOption.Builder(serverClientId = webClientId)
                 .build()
@@ -76,8 +81,9 @@ class GoogleAuthManager(private val context: Context) {
                 .addCredentialOption(signInOption)
                 .build()
 
-            val result = credentialManager.getCredential(
-                context = activityContext,
+            val cm = if (resolvedActivity != null) CredentialManager.create(resolvedActivity) else credentialManager
+            val result = cm.getCredential(
+                context = resolvedActivity ?: targetContext,
                 request = request
             )
 

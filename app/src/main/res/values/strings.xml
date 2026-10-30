@@ -1,5 +1,4 @@
 <resources>
     <string name="app_name">Smart Trade AI</string>
     <string name="default_web_client_id" translatable="false">613712404065-2q4tn20buj6lf6rhn4idtnpdeie9d44g.apps.googleusercontent.com</string>
-    <string name="firestore_database_id">ai-studio-android-smarttra-b127700d-7565-4609-9514-50108210f024</string>
 </resources>

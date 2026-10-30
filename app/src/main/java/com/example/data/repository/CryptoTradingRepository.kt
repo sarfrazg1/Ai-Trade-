@@ -142,27 +142,36 @@ class CryptoTradingRepository(
         db.paperTradeDao().delete(trade)
     }
 
+    suspend fun getOpenPaperTrades(): List<PaperTradeEntity> {
+        return db.paperTradeDao().getOpenTrades()
+    }
+
     /**
      * Checks open paper trades against latest price and updates triggered TP or SL.
+     * Prevents any trade closures on 0.0 or invalid prices.
      */
     suspend fun checkOpenTrades(symbol: String, currentPrice: Double) {
+        if (currentPrice <= 0.0 || currentPrice.isNaN() || currentPrice.isInfinite()) {
+            return
+        }
         val openTrades = db.paperTradeDao().getOpenTrades().filter { it.symbol.equals(symbol, ignoreCase = true) }
         for (trade in openTrades) {
+            if (trade.entryPrice <= 0.0) continue
             val isLong = trade.signalType == "LONG"
             if (isLong) {
-                if (currentPrice <= trade.stopLoss) {
+                if (trade.stopLoss > 0.0 && currentPrice <= trade.stopLoss) {
                     closePaperTrade(trade, trade.stopLoss, "CLOSED_SL")
-                } else if (currentPrice >= trade.tp2) {
+                } else if (trade.tp2 > 0.0 && currentPrice >= trade.tp2) {
                     closePaperTrade(trade, trade.tp2, "CLOSED_TP2")
-                } else if (currentPrice >= trade.tp1) {
+                } else if (trade.tp1 > 0.0 && currentPrice >= trade.tp1) {
                     closePaperTrade(trade, trade.tp1, "CLOSED_TP1")
                 }
             } else {
-                if (currentPrice >= trade.stopLoss) {
+                if (trade.stopLoss > 0.0 && currentPrice >= trade.stopLoss) {
                     closePaperTrade(trade, trade.stopLoss, "CLOSED_SL")
-                } else if (currentPrice <= trade.tp2) {
+                } else if (trade.tp2 > 0.0 && currentPrice <= trade.tp2) {
                     closePaperTrade(trade, trade.tp2, "CLOSED_TP2")
-                } else if (currentPrice <= trade.tp1) {
+                } else if (trade.tp1 > 0.0 && currentPrice <= trade.tp1) {
                     closePaperTrade(trade, trade.tp1, "CLOSED_TP1")
                 }
             }
@@ -218,10 +227,12 @@ class CryptoTradingRepository(
                 ?: primaryCandles.lastOrNull()?.close
                 ?: 0.0
 
-            // Check any paper trade trigger against live price
-            try {
-                checkOpenTrades(symbol, currentPrice)
-            } catch (_: Exception) {}
+            // Check any paper trade trigger against live price only if valid positive price
+            if (currentPrice > 0.0) {
+                try {
+                    checkOpenTrades(symbol, currentPrice)
+                } catch (_: Exception) {}
+            }
 
             val indicators = TechnicalIndicatorsCalculator.calculateIndicators(primaryCandles)
             val smc = SmcDetector.detectSmc(primaryCandles)

@@ -14,11 +14,13 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -64,22 +66,28 @@ fun PaperTradingScreen(
     savedSignals: List<SavedSignalEntity>,
     accountBalance: Double,
     currentLivePrice: Double,
+    livePrices: Map<String, Double> = emptyMap(),
+    currentSymbol: String = "BTCUSDT",
     backtestSummary: BacktestSummary?,
     onCloseTrade: (PaperTradeEntity) -> Unit,
     onDeleteTrade: (PaperTradeEntity) -> Unit,
     onDeleteSignal: (SavedSignalEntity) -> Unit,
     onRunBacktest: () -> Unit,
+    onRefresh: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var selectedSubTab by remember { mutableIntStateOf(0) }
     val openTrades = paperTrades.filter { it.status == "OPEN" }
     val closedTrades = paperTrades.filter { it.status != "OPEN" }
 
-    // Calculate total unrealized PnL
+    // Calculate total unrealized PnL using each open trade's matching symbol live price!
     var totalUnrealizedPnl = 0.0
     for (t in openTrades) {
+        val tradePrice = livePrices[t.symbol]
+            ?: if (t.symbol.equals(currentSymbol, ignoreCase = true) && currentLivePrice > 0.0) currentLivePrice
+            else t.entryPrice
         val isLong = t.signalType == "LONG"
-        val diff = if (isLong) (currentLivePrice - t.entryPrice) else (t.entryPrice - currentLivePrice)
+        val diff = if (isLong) (tradePrice - t.entryPrice) else (t.entryPrice - tradePrice)
         if (t.entryPrice > 0) {
             totalUnrealizedPnl += (diff / t.entryPrice) * (t.margin * t.leverage)
         }
@@ -99,7 +107,35 @@ fun PaperTradingScreen(
             modifier = Modifier.fillMaxWidth()
         ) {
             Column(modifier = Modifier.padding(14.dp)) {
-                Text(text = "Paper Trading Portfolio", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(text = "Paper Trading Portfolio", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(BullGreen.copy(alpha = 0.2f))
+                                .padding(horizontal = 5.dp, vertical = 2.dp)
+                        ) {
+                            Text("LIVE", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = BullGreen)
+                        }
+                    }
+                    IconButton(
+                        onClick = onRefresh,
+                        modifier = Modifier.size(28.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Refresh,
+                            contentDescription = "Refresh prices",
+                            tint = AccentCyan,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                }
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Row(
@@ -164,7 +200,13 @@ fun PaperTradingScreen(
 
         // Content
         when (selectedSubTab) {
-            0 -> OpenTradesList(openTrades = openTrades, livePrice = currentLivePrice, onClose = onCloseTrade)
+            0 -> OpenTradesList(
+                openTrades = openTrades,
+                livePrices = livePrices,
+                fallbackLivePrice = currentLivePrice,
+                currentSymbol = currentSymbol,
+                onClose = onCloseTrade
+            )
             1 -> ClosedTradesList(closedTrades = closedTrades, onDelete = onDeleteTrade)
             2 -> SavedSignalsList(savedSignals = savedSignals, onDelete = onDeleteSignal)
             3 -> BacktestSection(backtestSummary = backtestSummary, onRun = onRunBacktest)
@@ -175,7 +217,9 @@ fun PaperTradingScreen(
 @Composable
 private fun OpenTradesList(
     openTrades: List<PaperTradeEntity>,
-    livePrice: Double,
+    livePrices: Map<String, Double>,
+    fallbackLivePrice: Double,
+    currentSymbol: String,
     onClose: (PaperTradeEntity) -> Unit
 ) {
     if (openTrades.isEmpty()) {
@@ -191,7 +235,11 @@ private fun OpenTradesList(
         ) {
             items(openTrades) { trade ->
                 val isLong = trade.signalType == "LONG"
-                val diff = if (isLong) (livePrice - trade.entryPrice) else (trade.entryPrice - livePrice)
+                val markPrice = livePrices[trade.symbol]
+                    ?: if (trade.symbol.equals(currentSymbol, ignoreCase = true) && fallbackLivePrice > 0.0) fallbackLivePrice
+                    else trade.entryPrice
+
+                val diff = if (isLong) (markPrice - trade.entryPrice) else (trade.entryPrice - markPrice)
                 val pnlUsd = if (trade.entryPrice > 0) (diff / trade.entryPrice) * (trade.margin * trade.leverage) else 0.0
                 val pnlPct = if (trade.entryPrice > 0) (diff / trade.entryPrice) * trade.leverage * 100.0 else 0.0
                 val isPos = pnlUsd >= 0
@@ -242,7 +290,16 @@ private fun OpenTradesList(
                         ) {
                             Column {
                                 Text("Entry Price: $${formatPrice(trade.entryPrice)}", fontSize = 11.sp, color = TextSecondary)
-                                Text("Mark Price: $${formatPrice(livePrice)}", fontSize = 11.sp, color = TextSecondary)
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text("Mark Price: $${formatPrice(markPrice)}", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Box(
+                                        modifier = Modifier
+                                            .size(6.dp)
+                                            .clip(CircleShape)
+                                            .background(if (isPos) BullGreen else BearRed)
+                                    )
+                                }
                             }
                             Column(horizontalAlignment = Alignment.End) {
                                 Text("SL: $${formatPrice(trade.stopLoss)}", fontSize = 11.sp, color = BearRed)
@@ -259,7 +316,7 @@ private fun OpenTradesList(
                         ) {
                             Text("Margin: $${formatPrice(trade.margin)}", fontSize = 11.sp, color = TextMuted)
                             Text(
-                                text = "PnL: ${if (isPos) "+" else ""}$${formatPrice(pnlUsd)} (${String.format("%.2f", pnlPct)}%)",
+                                text = "PnL: ${if (isPos) "+" else ""}$${formatPrice(pnlUsd)} (${String.format(Locale.US, "%.2f", pnlPct)}%)",
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = if (isPos) BullGreen else BearRed

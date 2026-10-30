@@ -145,6 +145,13 @@ fun TopBarHeader(
                     if (stats != null) {
                         val isPositive = stats.priceChange24h >= 0
                         Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(6.dp)
+                                    .clip(CircleShape)
+                                    .background(BullGreen)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
                             Text(
                                 text = formatPrice(stats.lastPrice),
                                 fontSize = 15.sp,
@@ -187,7 +194,6 @@ fun TopBarHeader(
                         Spacer(modifier = Modifier.width(4.dp))
                         IconButton(
                             onClick = onRefresh,
-                            enabled = !isLoading,
                             modifier = Modifier
                                 .size(30.dp)
                                 .testTag("refresh_button")
@@ -202,7 +208,7 @@ fun TopBarHeader(
                                 Icon(
                                     imageVector = Icons.Default.Refresh,
                                     contentDescription = "Refresh market data",
-                                    tint = TextSecondary,
+                                    tint = AccentCyan,
                                     modifier = Modifier.size(18.dp)
                                 )
                             }
@@ -388,7 +394,6 @@ fun TopBarHeader(
 
                         IconButton(
                             onClick = onRefresh,
-                            enabled = !isLoading,
                             modifier = Modifier
                                 .size(32.dp)
                                 .testTag("refresh_button")
@@ -403,7 +408,7 @@ fun TopBarHeader(
                                 Icon(
                                     imageVector = Icons.Default.Refresh,
                                     contentDescription = "Refresh market data",
-                                    tint = TextSecondary,
+                                    tint = AccentCyan,
                                     modifier = Modifier.size(18.dp)
                                 )
                             }
@@ -448,6 +453,13 @@ fun TopBarHeader(
                     if (stats != null) {
                         val isPositive = stats.priceChange24h >= 0
                         Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(7.dp)
+                                    .clip(CircleShape)
+                                    .background(BullGreen)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
                             Text(
                                 text = formatPrice(stats.lastPrice),
                                 fontSize = 16.sp,

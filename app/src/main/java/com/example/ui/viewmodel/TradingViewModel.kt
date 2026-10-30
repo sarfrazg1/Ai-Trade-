@@ -1,5 +1,6 @@
 package com.example.ui.viewmodel
 
+import android.app.Activity
 import android.app.Application
 import android.content.Context
 import androidx.lifecycle.AndroidViewModel
@@ -18,11 +19,16 @@ import com.example.domain.model.AppFeature
 import com.example.domain.model.SignalType
 import com.example.domain.model.SubscriptionPlan
 import com.example.domain.model.Timeframe
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 data class TradingUiState(
@@ -35,6 +41,9 @@ data class TradingUiState(
     val riskPercent: Double = 2.0,
     val leverage: Int = 5,
     val selectedTab: Int = 0,
+    // Real-time live prices & updates
+    val livePrices: Map<String, Double> = emptyMap(),
+    val lastPriceTick: Long = System.currentTimeMillis(),
     // Chart Overlay toggles
     val showEma: Boolean = true,
     val showBollinger: Boolean = false,
@@ -108,6 +117,8 @@ class TradingViewModel(application: Application) : AndroidViewModel(application)
     val paperTrades: StateFlow<List<PaperTradeEntity>> = repository.paperTrades
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    private var tickerJob: Job? = null
+
     init {
         viewModelScope.launch {
             repository.seedDefaultWatchlistIfNeeded()
@@ -127,6 +138,111 @@ class TradingViewModel(application: Application) : AndroidViewModel(application)
                 }
             }
         }
+        startLivePriceTicker()
+    }
+
+    fun startLivePriceTicker() {
+        if (tickerJob?.isActive == true) return
+        tickerJob = viewModelScope.launch(Dispatchers.IO) {
+            while (isActive) {
+                try {
+                    pollLivePrices()
+                } catch (_: Exception) {
+                    // Suppress transient network hiccups
+                }
+                delay(2500)
+            }
+        }
+    }
+
+    suspend fun pollLivePrices() {
+        val current = _uiState.value.currentSymbol
+        val openSymbols = paperTrades.value.filter { it.status == "OPEN" }.map { it.symbol }
+        val watchSymbols = watchlist.value.map { it.symbol }
+        val symbolsToFetch = (setOf(current) + openSymbols + watchSymbols).filter { it.isNotBlank() }.toSet()
+
+        val newPrices = client.fetchLivePrices(symbolsToFetch)
+        if (newPrices.isNotEmpty()) {
+            val currentSymbolPrice = newPrices[current]
+
+            _uiState.update { state ->
+                val updatedAnalysis = state.analysisResult?.let { analysis ->
+                    if (currentSymbolPrice != null && currentSymbolPrice > 0.0) {
+                        val currentStats = analysis.futuresStats
+                        val updatedStats = (currentStats ?: com.example.domain.model.FuturesStats(
+                            symbol = current,
+                            lastPrice = currentSymbolPrice,
+                            markPrice = currentSymbolPrice,
+                            indexPrice = currentSymbolPrice,
+                            priceChange24h = 0.0,
+                            high24h = currentSymbolPrice,
+                            low24h = currentSymbolPrice,
+                            volume24h = 0.0,
+                            fundingRate = 0.0001,
+                            nextFundingTime = System.currentTimeMillis() + 4 * 3600 * 1000,
+                            openInterest = 0.0,
+                            longShortRatio = null,
+                            source = "Live Binance Ticker",
+                            lastUpdated = System.currentTimeMillis(),
+                            isFallback = false
+                        )).copy(
+                            lastPrice = currentSymbolPrice,
+                            markPrice = currentSymbolPrice,
+                            lastUpdated = System.currentTimeMillis()
+                        )
+
+                        val updatedCandles = if (analysis.candles.isNotEmpty()) {
+                            val lastCandle = analysis.candles.last()
+                            val updatedClose = currentSymbolPrice
+                            val updatedHigh = maxOf(lastCandle.high, currentSymbolPrice)
+                            val updatedLow = minOf(lastCandle.low, currentSymbolPrice)
+                            analysis.candles.dropLast(1) + lastCandle.copy(
+                                close = updatedClose,
+                                high = updatedHigh,
+                                low = updatedLow
+                            )
+                        } else {
+                            analysis.candles
+                        }
+
+                        analysis.copy(
+                            futuresStats = updatedStats,
+                            candles = updatedCandles,
+                            timestamp = System.currentTimeMillis()
+                        )
+                    } else {
+                        analysis
+                    }
+                }
+
+                state.copy(
+                    livePrices = state.livePrices + newPrices,
+                    analysisResult = updatedAnalysis,
+                    lastPriceTick = System.currentTimeMillis()
+                )
+            }
+
+            // Real-time evaluation of open trades against genuine positive prices
+            newPrices.forEach { (sym, price) ->
+                if (price > 0.0) {
+                    repository.checkOpenTrades(sym, price)
+                }
+            }
+        }
+    }
+
+    fun onAppResumed() {
+        startLivePriceTicker()
+        viewModelScope.launch {
+            try {
+                pollLivePrices()
+            } catch (_: Exception) {}
+        }
+    }
+
+    fun onAppPaused() {
+        tickerJob?.cancel()
+        tickerJob = null
     }
 
     fun selectTab(tabIndex: Int) {
@@ -137,7 +253,12 @@ class TradingViewModel(application: Application) : AndroidViewModel(application)
         val clean = symbol.uppercase().trim()
         if (clean.isNotEmpty() && clean != _uiState.value.currentSymbol) {
             _uiState.value = _uiState.value.copy(currentSymbol = clean)
-            loadCurrentPair()
+            viewModelScope.launch {
+                try {
+                    pollLivePrices()
+                } catch (_: Exception) {}
+                loadCurrentPair()
+            }
         }
     }
 
@@ -156,7 +277,12 @@ class TradingViewModel(application: Application) : AndroidViewModel(application)
     }
 
     fun refreshData() {
-        loadCurrentPair()
+        viewModelScope.launch {
+            try {
+                pollLivePrices()
+            } catch (_: Exception) {}
+            loadCurrentPair()
+        }
     }
 
     fun updateRiskSettings(balance: Double, riskPct: Double, lev: Int) {
@@ -233,10 +359,21 @@ class TradingViewModel(application: Application) : AndroidViewModel(application)
     }
 
     fun closePaperTrade(trade: PaperTradeEntity) {
-        val currentPrice = _uiState.value.analysisResult?.futuresStats?.lastPrice ?: trade.entryPrice
+        val markPrice = _uiState.value.livePrices[trade.symbol]
+            ?: if (trade.symbol.equals(_uiState.value.currentSymbol, ignoreCase = true)) {
+                _uiState.value.analysisResult?.futuresStats?.lastPrice ?: trade.entryPrice
+            } else {
+                trade.entryPrice
+            }
+        val currentPrice = if (markPrice > 0.0) markPrice else trade.entryPrice
         viewModelScope.launch {
             repository.closePaperTrade(trade, currentPrice, "MANUALLY_CLOSED")
-            _uiState.value = _uiState.value.copy(userNotification = "Paper trade closed manually")
+            val notif = if (_uiState.value.isRomanUrdu) {
+                "Paper trade band ho gaya @ $$currentPrice"
+            } else {
+                "Paper trade closed manually @ $$currentPrice"
+            }
+            _uiState.value = _uiState.value.copy(userNotification = notif)
         }
     }
 
@@ -506,10 +643,17 @@ class TradingViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
+    private var activityProvider: (() -> Activity?)? = null
+
+    fun attachActivity(activity: Activity) {
+        this.activityProvider = { activity }
+    }
+
     fun signInWithGoogle(launcherContext: Context? = null) {
+        val targetContext = launcherContext ?: activityProvider?.invoke()
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true)
-            val result = googleAuthManager.signInWithGoogle(launcherContext)
+            val result = googleAuthManager.signInWithGoogle(targetContext)
             _uiState.value = _uiState.value.copy(isLoading = false)
             result.onSuccess { user ->
                 _uiState.value = _uiState.value.copy(

@@ -75,6 +75,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        viewModel.attachActivity(this)
         try {
             if (com.google.firebase.FirebaseApp.getApps(this).isEmpty()) {
                 com.google.firebase.FirebaseApp.initializeApp(this)
@@ -88,6 +89,17 @@ class MainActivity : ComponentActivity() {
                 SmartTradeApp(viewModel = viewModel)
             }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        viewModel.attachActivity(this)
+        viewModel.onAppResumed()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        viewModel.onAppPaused()
     }
 }
 
@@ -285,11 +297,14 @@ fun SmartTradeApp(viewModel: TradingViewModel) {
                         savedSignals = savedSignals,
                         accountBalance = uiState.accountBalance,
                         currentLivePrice = livePrice,
+                        livePrices = uiState.livePrices,
+                        currentSymbol = uiState.currentSymbol,
                         backtestSummary = uiState.backtestSummary,
                         onCloseTrade = { viewModel.closePaperTrade(it) },
                         onDeleteTrade = { viewModel.deletePaperTrade(it) },
                         onDeleteSignal = { viewModel.deleteSavedSignal(it) },
-                        onRunBacktest = { viewModel.runBacktest() }
+                        onRunBacktest = { viewModel.runBacktest() },
+                        onRefresh = { viewModel.refreshData() }
                     )
                     5 -> BeginnerGuideScreen(
                         isRomanUrdu = uiState.isRomanUrdu,
