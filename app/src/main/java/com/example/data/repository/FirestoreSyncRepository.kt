@@ -5,6 +5,7 @@ import android.util.Log
 import com.example.R
 import com.example.data.local.PaperTradeEntity
 import com.example.domain.model.UserSubscriptionState
+import com.google.firebase.FirebaseApp
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
@@ -15,15 +16,35 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.tasks.await
 
+private fun getFirestoreSafe(context: Context): FirebaseFirestore? {
+    return try {
+        if (FirebaseApp.getApps(context).isEmpty()) {
+            FirebaseApp.initializeApp(context)
+        }
+        val dbId = context.applicationContext.getString(R.string.firestore_database_id)
+        if (dbId.isNotBlank()) {
+            FirebaseFirestore.getInstance(FirebaseApp.getInstance(), dbId)
+        } else {
+            FirebaseFirestore.getInstance()
+        }
+    } catch (e: Exception) {
+        Log.e("FirestoreSyncRepo", "Could not initialize Firestore with custom databaseId: ${e.message}")
+        try {
+            FirebaseFirestore.getInstance()
+        } catch (e2: Exception) {
+            Log.e("FirestoreSyncRepo", "Default FirebaseFirestore not available: ${e2.message}")
+            null
+        }
+    }
+}
+
 class FirestoreSyncRepository(
-    private val db: FirebaseFirestore
+    private val firestoreInstance: FirebaseFirestore? = null
 ) {
     // Convenience constructor resolving the named database ID from string resources
-    constructor(context: Context) : this(
-        FirebaseFirestore.getInstance(
-            context.applicationContext.getString(R.string.firestore_database_id)
-        )
-    )
+    constructor(context: Context) : this(getFirestoreSafe(context))
+
+    private val db: FirebaseFirestore? get() = firestoreInstance
 
     companion object {
         private const val TAG = "FirestoreSyncRepo"
@@ -33,8 +54,9 @@ class FirestoreSyncRepository(
         user: FirebaseUser,
         subscriptionState: UserSubscriptionState
     ): Result<Unit> {
+        val database = db ?: return Result.failure(IllegalStateException("Firestore is not available"))
         return try {
-            val userDoc = db.collection("users").document(user.uid)
+            val userDoc = database.collection("users").document(user.uid)
             val data = hashMapOf<String, Any>(
                 "id" to user.uid,
                 "email" to (user.email ?: ""),
@@ -64,8 +86,9 @@ class FirestoreSyncRepository(
     }
 
     suspend fun fetchUserProfile(userId: String): Map<String, Any>? {
+        val database = db ?: return null
         return try {
-            val snapshot = db.collection("users").document(userId).get().await()
+            val snapshot = database.collection("users").document(userId).get().await()
             if (snapshot.exists()) snapshot.data else null
         } catch (e: Exception) {
             Log.e(TAG, "Failed to fetch user profile for $userId", e)
@@ -74,9 +97,10 @@ class FirestoreSyncRepository(
     }
 
     suspend fun syncPaperTrade(userId: String, trade: PaperTradeEntity): Result<Unit> {
+        val database = db ?: return Result.failure(IllegalStateException("Firestore is not available"))
         return try {
             val tradeDocId = "${userId}_${trade.id}"
-            val docRef = db.collection("paperTrades").document(tradeDocId)
+            val docRef = database.collection("paperTrades").document(tradeDocId)
             val data = hashMapOf<String, Any>(
                 "id" to tradeDocId,
                 "userId" to userId,
@@ -104,8 +128,9 @@ class FirestoreSyncRepository(
     }
 
     fun observePaperTrades(userId: String?): Flow<List<Map<String, Any>>> {
+        val database = db ?: return flowOf(emptyList())
         if (userId.isNullOrBlank()) return flowOf(emptyList())
-        return db.collection("paperTrades")
+        return database.collection("paperTrades")
             .whereEqualTo("userId", userId)
             .snapshots()
             .map { snapshot ->
@@ -121,9 +146,10 @@ class FirestoreSyncRepository(
         influencerCode: String = "",
         code: String? = null
     ): Result<Unit> {
+        val database = db ?: return Result.failure(IllegalStateException("Firestore is not available"))
         return try {
             val requestId = "${userId}_${System.currentTimeMillis()}"
-            val docRef = db.collection("activationRequests").document(requestId)
+            val docRef = database.collection("activationRequests").document(requestId)
             val data = hashMapOf<String, Any>(
                 "id" to requestId,
                 "userId" to userId,
@@ -145,8 +171,9 @@ class FirestoreSyncRepository(
     }
 
     fun observeActivationRequests(userId: String?): Flow<List<Map<String, Any>>> {
+        val database = db ?: return flowOf(emptyList())
         if (userId.isNullOrBlank()) return flowOf(emptyList())
-        return db.collection("activationRequests")
+        return database.collection("activationRequests")
             .whereEqualTo("userId", userId)
             .snapshots()
             .map { snapshot ->
@@ -160,13 +187,13 @@ class FirestoreSyncRepository(
         currentUserRef: String,
         influencerCode: String?
     ): Result<String> {
+        val database = db ?: return Result.failure(IllegalStateException("Firestore is not available"))
         return try {
             val cleanCode = code.trim().uppercase()
-            val codeDocRef = db.collection("activationCodes").document(cleanCode)
+            val codeDocRef = database.collection("activationCodes").document(cleanCode)
             val codeSnap = codeDocRef.get().await()
 
             if (!codeSnap.exists()) {
-                // If not found in cloud yet (e.g. offline-generated or direct HMAC), fallback gracefully
                 return Result.failure(IllegalArgumentException("Activation code not found in Cloud Registry. Please ensure the code is correct or wait for WhatsApp admin verification."))
             }
 
@@ -201,7 +228,7 @@ class FirestoreSyncRepository(
             ).await()
 
             // 2. Update user profile in Firestore
-            val userDoc = db.collection("users").document(user.uid)
+            val userDoc = database.collection("users").document(user.uid)
             val profileUpdate = hashMapOf<String, Any>(
                 "subscriptionPlan" to planId,
                 "subscriptionStatus" to "ACTIVE",
@@ -223,7 +250,7 @@ class FirestoreSyncRepository(
                 }
                 if (commissionPkr > 0) {
                     val commId = "COMM_${System.currentTimeMillis()}_${cleanCode.takeLast(4)}"
-                    val commDoc = db.collection("commissions").document(commId)
+                    val commDoc = database.collection("commissions").document(commId)
                     commDoc.set(
                         mapOf(
                             "id" to commId,
@@ -254,8 +281,9 @@ class FirestoreSyncRepository(
         paymentRef: String = "MANUAL_WHATSAPP",
         referralCode: String = ""
     ): Result<Unit> {
+        val database = db ?: return Result.failure(IllegalStateException("Firestore is not available"))
         return try {
-            val docRef = db.collection("activationCodes").document(code.trim().uppercase())
+            val docRef = database.collection("activationCodes").document(code.trim().uppercase())
             val data = hashMapOf<String, Any>(
                 "code" to code.trim().uppercase(),
                 "userReference" to targetUserRef.trim().uppercase(),
@@ -276,8 +304,9 @@ class FirestoreSyncRepository(
     }
 
     fun observeInfluencerCommissions(influencerCode: String): Flow<List<Map<String, Any>>> {
+        val database = db ?: return flowOf(emptyList())
         if (influencerCode.isBlank()) return flowOf(emptyList())
-        return db.collection("commissions")
+        return database.collection("commissions")
             .whereEqualTo("influencerCode", influencerCode.trim().uppercase())
             .snapshots()
             .map { snapshot ->

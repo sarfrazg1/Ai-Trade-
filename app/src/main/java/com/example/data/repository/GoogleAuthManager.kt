@@ -23,10 +23,19 @@ import kotlinx.coroutines.tasks.await
 
 class GoogleAuthManager(private val context: Context) {
 
-    private val auth: FirebaseAuth = FirebaseAuth.getInstance()
+    private val auth: FirebaseAuth? = try {
+        if (com.google.firebase.FirebaseApp.getApps(context).isEmpty()) {
+            com.google.firebase.FirebaseApp.initializeApp(context)
+        }
+        FirebaseAuth.getInstance()
+    } catch (e: Exception) {
+        Log.e("GoogleAuthManager", "FirebaseAuth initialization error", e)
+        null
+    }
+
     private val credentialManager: CredentialManager = CredentialManager.create(context)
 
-    private val _currentUser = MutableStateFlow<FirebaseUser?>(auth.currentUser)
+    private val _currentUser = MutableStateFlow<FirebaseUser?>(auth?.currentUser)
     val currentUser: StateFlow<FirebaseUser?> = _currentUser.asStateFlow()
 
     private val authStateListener = FirebaseAuth.AuthStateListener { firebaseAuth ->
@@ -34,7 +43,7 @@ class GoogleAuthManager(private val context: Context) {
     }
 
     init {
-        auth.addAuthStateListener(authStateListener)
+        auth?.addAuthStateListener(authStateListener)
     }
 
     suspend fun signInWithGoogle(): Result<FirebaseUser> {
@@ -61,7 +70,13 @@ class GoogleAuthManager(private val context: Context) {
             if (credential is CustomCredential && credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
                 val googleIdTokenCredential = GoogleIdTokenCredential.createFrom(credential.data)
                 val authCredential = GoogleAuthProvider.getCredential(googleIdTokenCredential.idToken, null)
-                val authResult = auth.signInWithCredential(authCredential).await()
+                val activeAuth = auth ?: run {
+                    if (com.google.firebase.FirebaseApp.getApps(context).isEmpty()) {
+                        com.google.firebase.FirebaseApp.initializeApp(context)
+                    }
+                    FirebaseAuth.getInstance()
+                }
+                val authResult = activeAuth.signInWithCredential(authCredential).await()
                 val user = authResult.user
                 if (user != null) {
                     Result.success(user)
@@ -84,15 +99,21 @@ class GoogleAuthManager(private val context: Context) {
     }
 
     fun signOut() {
-        auth.signOut()
+        auth?.signOut()
         _currentUser.value = null
     }
 
     fun authStateFlow(): Flow<FirebaseUser?> = callbackFlow {
-        val listener = FirebaseAuth.AuthStateListener { fAuth ->
-            trySend(fAuth.currentUser)
+        val currentAuth = auth
+        if (currentAuth == null) {
+            trySend(null)
+            awaitClose { }
+        } else {
+            val listener = FirebaseAuth.AuthStateListener { fAuth ->
+                trySend(fAuth.currentUser)
+            }
+            currentAuth.addAuthStateListener(listener)
+            awaitClose { currentAuth.removeAuthStateListener(listener) }
         }
-        auth.addAuthStateListener(listener)
-        awaitClose { auth.removeAuthStateListener(listener) }
     }
 }

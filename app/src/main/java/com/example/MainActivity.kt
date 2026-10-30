@@ -74,6 +74,13 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        try {
+            if (com.google.firebase.FirebaseApp.getApps(this).isEmpty()) {
+                com.google.firebase.FirebaseApp.initializeApp(this)
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("MainActivity", "Firebase initialization check in onCreate", e)
+        }
         enableEdgeToEdge()
         setContent {
             SmartTradeTheme {
