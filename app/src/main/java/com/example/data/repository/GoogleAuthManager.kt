@@ -39,7 +39,12 @@ class GoogleAuthManager(private val context: Context) {
 
     suspend fun signInWithGoogle(): Result<FirebaseUser> {
         return try {
-            val webClientId = context.getString(R.string.default_web_client_id)
+            val resId = context.resources.getIdentifier("default_web_client_id", "string", context.packageName)
+            val webClientId = if (resId != 0) {
+                context.getString(resId)
+            } else {
+                context.getString(R.string.default_web_client_id)
+            }
             val signInOption = GetSignInWithGoogleOption.Builder(serverClientId = webClientId)
                 .build()
 

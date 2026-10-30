@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">Smart Trade AI</string>
+    <string name="default_web_client_id" translatable="false">613712404065-2q4tn20buj6lf6rhn4idtnpdeie9d44g.apps.googleusercontent.com</string>
 </resources>

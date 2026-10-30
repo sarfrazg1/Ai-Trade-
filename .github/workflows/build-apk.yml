@@ -45,6 +45,11 @@ jobs:
             cp .env.example .env
             echo "Created .env from .env.example"
           fi
+          if [ -f "app/google-services.json" ]; then
+            echo "Verified app/google-services.json exists."
+          else
+            echo "::warning::app/google-services.json not found in repository. Fallback resources will be used."
+          fi
 
       - name: Set up Gradle 9.3.1
         uses: gradle/actions/setup-gradle@v4
