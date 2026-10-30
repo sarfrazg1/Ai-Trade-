@@ -1,6 +1,7 @@
 package com.example.ui.viewmodel
 
 import android.app.Application
+import android.content.Context
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.room.Room
@@ -505,10 +506,10 @@ class TradingViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    fun signInWithGoogle() {
+    fun signInWithGoogle(launcherContext: Context? = null) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true)
-            val result = googleAuthManager.signInWithGoogle()
+            val result = googleAuthManager.signInWithGoogle(launcherContext)
             _uiState.value = _uiState.value.copy(isLoading = false)
             result.onSuccess { user ->
                 _uiState.value = _uiState.value.copy(

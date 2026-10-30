@@ -45,6 +45,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -92,6 +93,7 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun SmartTradeApp(viewModel: TradingViewModel) {
+    val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
     val watchlist by viewModel.watchlist.collectAsState()
     val savedSignals by viewModel.savedSignals.collectAsState()
@@ -370,7 +372,7 @@ fun SmartTradeApp(viewModel: TradingViewModel) {
                     isRomanUrdu = uiState.isRomanUrdu,
                     googleUserEmail = uiState.googleUserEmail,
                     isGoogleSignedIn = uiState.isGoogleSignedIn,
-                    onSignInGoogle = { viewModel.signInWithGoogle() },
+                    onSignInGoogle = { viewModel.signInWithGoogle(context) },
                     onSignOutGoogle = { viewModel.signOutGoogle() },
                     onSyncCloud = { viewModel.syncDataToFirestore() },
                     onApplyReferralCode = { viewModel.applyReferralCode(it) },
@@ -387,7 +389,7 @@ fun SmartTradeApp(viewModel: TradingViewModel) {
                     subscriptionManager = viewModel.subscriptionManager,
                     isUserAdmin = uiState.isUserAdmin,
                     adminEmail = uiState.googleUserEmail,
-                    onSignInAdmin = { viewModel.signInWithGoogle() },
+                    onSignInAdmin = { viewModel.signInWithGoogle(context) },
                     onPublishCodeCloud = { code, userRef, plan, days, paymentRef ->
                         viewModel.adminPublishCodeToCloud(code, userRef, plan, days, paymentRef)
                     },
