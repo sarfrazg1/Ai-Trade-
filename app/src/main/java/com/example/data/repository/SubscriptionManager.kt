@@ -213,6 +213,40 @@ class SubscriptionManager(private val context: Context) {
         return Result.success("Subscription successfully activated for ${plan.title} (Valid for $validityDays days)!")
     }
 
+    fun activateFromRealtimeDb(planName: String, code: String, expiryTime: Long): Result<String> {
+        val plan = when (planName.lowercase()) {
+            "golden", "gold" -> SubscriptionPlan.GOLDEN
+            "silver" -> SubscriptionPlan.SILVER
+            else -> SubscriptionPlan.BRONZE
+        }
+        val now = System.currentTimeMillis()
+        val userRef = getUserReference()
+        prefs.edit()
+            .putString("active_plan_id", plan.id)
+            .putString("subscription_status", SubscriptionStatus.ACTIVE.name)
+            .putString("active_code", code)
+            .putLong("activated_at", now)
+            .putLong("expires_at", expiryTime)
+            .apply()
+
+        _subscriptionState.value = _subscriptionState.value.copy(
+            currentPlan = plan,
+            status = SubscriptionStatus.ACTIVE,
+            activationCode = code,
+            activatedAt = now,
+            expiresAt = expiryTime
+        )
+
+        addAuditLog(
+            action = "RTDB_CODE_REDEEMED",
+            userRef = userRef,
+            plan = plan.id,
+            details = "Code $code successfully redeemed via Realtime Database. Active until ${java.util.Date(expiryTime)}."
+        )
+
+        return Result.success("Subscription successfully activated for ${plan.title} (Valid for 30 days)!")
+    }
+
     /**
      * Records an influencer sale with 20% commission and 7-day waiting period.
      */
@@ -397,15 +431,40 @@ class SubscriptionManager(private val context: Context) {
 
     private fun loadSubscriptionState(): UserSubscriptionState {
         val userRef = prefs.getString("user_reference", null) ?: "STAI-USER-100001"
+        val referral = prefs.getString("referral_code", null)
+        val disclaimer = prefs.getBoolean("disclaimer_accepted", false)
+        val terms = prefs.getBoolean("terms_accepted", false)
+        val consentTime = if (prefs.contains("consent_timestamp")) prefs.getLong("consent_timestamp", 0L) else null
+
+        // Check if activated via Firebase Realtime Database (ActivationHelper)
+        if (com.example.ActivationHelper.isAppActivated(context)) {
+            val rtdbPlanStr = com.example.ActivationHelper.getActivatedPlan(context)?.lowercase() ?: "bronze"
+            val rtdbPlan = when (rtdbPlanStr) {
+                "golden", "gold" -> SubscriptionPlan.GOLDEN
+                "silver" -> SubscriptionPlan.SILVER
+                else -> SubscriptionPlan.BRONZE
+            }
+            val rtdbExpiry = com.example.ActivationHelper.getActivatedExpiry(context)
+            val rtdbCode = com.example.ActivationHelper.getActivatedCode(context) ?: prefs.getString("active_code", "RTDB-ACTIVE")
+            return UserSubscriptionState(
+                userReference = userRef,
+                currentPlan = rtdbPlan,
+                status = SubscriptionStatus.ACTIVE,
+                activationCode = rtdbCode,
+                activatedAt = prefs.getLong("activated_at", System.currentTimeMillis()),
+                expiresAt = rtdbExpiry,
+                referralCode = referral,
+                termsAccepted = terms,
+                disclaimerAccepted = disclaimer,
+                consentTimestamp = consentTime
+            )
+        }
+
         val planId = prefs.getString("active_plan_id", SubscriptionPlan.FREE_TRIAL.id)
         val statusStr = prefs.getString("subscription_status", SubscriptionStatus.TRIAL.name)
         val activeCode = prefs.getString("active_code", null)
         val activatedAt = if (prefs.contains("activated_at")) prefs.getLong("activated_at", 0L) else null
         val expiresAt = if (prefs.contains("expires_at")) prefs.getLong("expires_at", 0L) else null
-        val referral = prefs.getString("referral_code", null)
-        val disclaimer = prefs.getBoolean("disclaimer_accepted", false)
-        val terms = prefs.getBoolean("terms_accepted", false)
-        val consentTime = if (prefs.contains("consent_timestamp")) prefs.getLong("consent_timestamp", 0L) else null
 
         val rawPlan = SubscriptionPlan.fromId(planId)
         val plan = if (rawPlan != SubscriptionPlan.FREE_TRIAL) {
@@ -586,6 +645,26 @@ class SubscriptionManager(private val context: Context) {
                         details = obj.getString("details")
                     )
                 )
+            }
+        } catch (_: Exception) {}
+        return list
+    }
+
+    fun getPresetRtdbCodes(): List<Triple<String, String, Int>> {
+        val list = mutableListOf<Triple<String, String, Int>>()
+        try {
+            context.assets.open("activation_codes.csv").bufferedReader().useLines { lines ->
+                lines.drop(1).forEach { line ->
+                    val tokens = line.split(",")
+                    if (tokens.size >= 3) {
+                        val code = tokens[0].trim()
+                        val plan = tokens[1].trim()
+                        val price = tokens[2].trim().toIntOrNull() ?: 0
+                        if (code.isNotEmpty()) {
+                            list.add(Triple(code, plan, price))
+                        }
+                    }
+                }
             }
         } catch (_: Exception) {}
         return list

@@ -763,17 +763,127 @@ private fun InfluencerLedgerTab(
 
 @Composable
 private fun IssuedCodesTab(subscriptionManager: SubscriptionManager) {
+    val context = androidx.compose.ui.platform.LocalContext.current
     val codes = remember { subscriptionManager.getIssuedCodes() }
+    val rtdbCodes = remember { subscriptionManager.getPresetRtdbCodes() }
     val dateFormat = remember { SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()) }
+    var filterText by remember { mutableStateOf("") }
+
+    val filteredRtdb = remember(filterText) {
+        if (filterText.isBlank()) rtdbCodes
+        else rtdbCodes.filter { it.first.contains(filterText, ignoreCase = true) || it.second.contains(filterText, ignoreCase = true) }
+    }
 
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
             .padding(14.dp)
     ) {
+        item {
+            Text(
+                text = "⚡ Realtime Database Codes (${rtdbCodes.size} Available)",
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold,
+                color = AccentCyan
+            )
+            Text(
+                text = "Firebase RTDB: gen-lang-client-0963937245-default-rtdb",
+                fontSize = 10.sp,
+                color = TextMuted
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            OutlinedTextField(
+                value = filterText,
+                onValueChange = { filterText = it },
+                label = { Text("Filter codes (e.g. GOLD, SILVER, BRONZE)", fontSize = 11.sp) },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = AccentCyan,
+                    unfocusedBorderColor = CryptoCardBorder,
+                    focusedTextColor = TextPrimary,
+                    unfocusedTextColor = TextPrimary
+                )
+            )
+            Spacer(modifier = Modifier.height(10.dp))
+        }
+
+        if (filteredRtdb.isEmpty()) {
+            item {
+                Text("No matching Realtime Database codes.", fontSize = 12.sp, color = TextMuted)
+            }
+        }
+
+        items(filteredRtdb.take(50)) { item ->
+            val code = item.first
+            val plan = item.second
+            val price = item.third
+            val planColor = when (plan.lowercase()) {
+                "golden", "gold" -> Color(0xFFFFD700)
+                "silver" -> Color(0xFFC0C0C0)
+                else -> Color(0xFFCD7F32)
+            }
+
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp),
+                colors = CardDefaults.cardColors(containerColor = CryptoSurface),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(10.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(text = code, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = planColor)
+                        Text(
+                            text = "Plan: ${plan.uppercase()} | Price: PKR $price (30 Days)",
+                            fontSize = 10.sp,
+                            color = TextSecondary
+                        )
+                    }
+                    IconButton(
+                        onClick = {
+                            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                            clipboard.setPrimaryClip(ClipData.newPlainText("Activation Code", code))
+                            android.widget.Toast.makeText(context, "Copied: $code", android.widget.Toast.LENGTH_SHORT).show()
+                        }
+                    ) {
+                        Icon(imageVector = Icons.Default.ContentCopy, contentDescription = "Copy Code", tint = AccentCyan)
+                    }
+                }
+            }
+        }
+
+        if (filteredRtdb.size > 50) {
+            item {
+                Text(
+                    text = "... and ${filteredRtdb.size - 50} more codes. Use filter above to search.",
+                    fontSize = 11.sp,
+                    color = TextMuted,
+                    modifier = Modifier.padding(vertical = 8.dp)
+                )
+            }
+        }
+
+        item {
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = "Custom Issued Codes (${codes.size})",
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
+                color = BullGreen
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+        }
+
         if (codes.isEmpty()) {
             item {
-                Text("No issued activation keys found.", fontSize = 12.sp, color = TextMuted)
+                Text("No custom issued activation keys found.", fontSize = 11.sp, color = TextMuted)
             }
         }
 
@@ -798,12 +908,25 @@ private fun IssuedCodesTab(subscriptionManager: SubscriptionManager) {
                     Text(text = "Payment Ref: $paymentRef", fontSize = 10.sp, color = TextMuted)
                     Text(text = "Issued: ${dateFormat.format(Date(createdAt))}", fontSize = 10.sp, color = TextMuted)
                     Spacer(modifier = Modifier.height(6.dp))
-                    Button(
-                        onClick = { subscriptionManager.revokeIssuedCode(code) },
-                        colors = ButtonDefaults.buttonColors(containerColor = BearRed),
-                        shape = RoundedCornerShape(4.dp)
-                    ) {
-                        Text("Revoke Key", fontSize = 10.sp, color = Color.White)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(
+                            onClick = {
+                                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                clipboard.setPrimaryClip(ClipData.newPlainText("Activation Code", code))
+                                android.widget.Toast.makeText(context, "Copied: $code", android.widget.Toast.LENGTH_SHORT).show()
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = AccentCyan),
+                            shape = RoundedCornerShape(4.dp)
+                        ) {
+                            Text("Copy", fontSize = 10.sp, color = Color.Black)
+                        }
+                        Button(
+                            onClick = { subscriptionManager.revokeIssuedCode(code) },
+                            colors = ButtonDefaults.buttonColors(containerColor = BearRed),
+                            shape = RoundedCornerShape(4.dp)
+                        ) {
+                            Text("Revoke Key", fontSize = 10.sp, color = Color.White)
+                        }
                     }
                 }
             }

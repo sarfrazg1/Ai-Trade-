@@ -620,9 +620,9 @@ fun SubscriptionScreen(
                 Column {
                     Text(
                         text = if (isRomanUrdu) {
-                            "WhatsApp par administrator se mila hua unique activation code yahan darj karein. Yeh code aapke user reference (${subscriptionState.userReference}) k sath munsalik hai."
+                            "WhatsApp par administrator se mila hua unique activation code ya Realtime Database code yahan darj karein."
                         } else {
-                            "Enter the unique activation code provided by the administrator on WhatsApp. This code is bound to your user reference (${subscriptionState.userReference})."
+                            "Enter the activation code from administrator or Firebase Realtime Database."
                         },
                         fontSize = 12.sp,
                         color = TextSecondary
@@ -632,7 +632,7 @@ fun SubscriptionScreen(
                         value = inputCode,
                         onValueChange = { inputCode = it },
                         label = { Text("Activation Code", fontSize = 11.sp) },
-                        placeholder = { Text("e.g. STAI-GOLD-XXXX-30D-XXXXXXXX", fontSize = 11.sp) },
+                        placeholder = { Text("e.g. GOLD-G000X9LM-4521-0", fontSize = 11.sp) },
                         singleLine = true,
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = BullGreen,

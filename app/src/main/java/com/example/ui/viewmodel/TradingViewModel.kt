@@ -535,43 +535,64 @@ class TradingViewModel(application: Application) : AndroidViewModel(application)
         val userRef = subscriptionManager.getUserReference()
         val referral = subscriptionState.value.referralCode
 
-        if (user != null) {
-            val nonNullUser = user
-            viewModelScope.launch {
-                _uiState.value = _uiState.value.copy(isLoading = true)
-                val cloudRes = firestoreSyncRepository.redeemActivationCodeCloud(
-                    user = nonNullUser,
-                    code = code,
-                    currentUserRef = userRef,
-                    influencerCode = referral
-                )
-                _uiState.value = _uiState.value.copy(isLoading = false)
+        _uiState.value = _uiState.value.copy(isLoading = true)
 
-                if (cloudRes.isSuccess) {
-                    // Update local manager for instant UI state
-                    subscriptionManager.redeemActivationCode(code)
-                    _uiState.value = _uiState.value.copy(
-                        userNotification = cloudRes.getOrNull() ?: "Subscription activated in Firebase Cloud!"
-                    )
-                } else {
-                    // Fall back to local HMAC verification if offline or manually signed
-                    val localRes = subscriptionManager.redeemActivationCode(code)
-                    localRes.onSuccess { msg ->
-                        _uiState.value = _uiState.value.copy(userNotification = msg)
-                        firestoreSyncRepository.syncUserProfile(nonNullUser, subscriptionState.value)
-                    }.onFailure { err ->
-                        _uiState.value = _uiState.value.copy(
-                            userNotification = "Activation failed: ${err.localizedMessage ?: cloudRes.exceptionOrNull()?.localizedMessage}"
-                        )
+        // 1. Try Firebase Realtime Database (ActivationHelper)
+        com.example.ActivationHelper.autoActivate(getApplication(), code) { success, message ->
+            if (success) {
+                val planName = com.example.ActivationHelper.getActivatedPlan(getApplication()) ?: "bronze"
+                val expiry = com.example.ActivationHelper.getActivatedExpiry(getApplication())
+                subscriptionManager.activateFromRealtimeDb(planName, code, expiry)
+
+                if (user != null) {
+                    viewModelScope.launch {
+                        firestoreSyncRepository.syncUserProfile(user, subscriptionState.value)
                     }
                 }
-            }
-        } else {
-            val result = subscriptionManager.redeemActivationCode(code)
-            result.onSuccess { message ->
-                _uiState.value = _uiState.value.copy(userNotification = message)
-            }.onFailure { err ->
-                _uiState.value = _uiState.value.copy(userNotification = err.localizedMessage ?: "Invalid code")
+
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    userNotification = message
+                )
+            } else {
+                // If code not in RTDB, fallback to Firestore or local cryptographic code
+                if (user != null) {
+                    val nonNullUser = user
+                    viewModelScope.launch {
+                        val cloudRes = firestoreSyncRepository.redeemActivationCodeCloud(
+                            user = nonNullUser,
+                            code = code,
+                            currentUserRef = userRef,
+                            influencerCode = referral
+                        )
+                        _uiState.value = _uiState.value.copy(isLoading = false)
+
+                        if (cloudRes.isSuccess) {
+                            subscriptionManager.redeemActivationCode(code)
+                            _uiState.value = _uiState.value.copy(
+                                userNotification = cloudRes.getOrNull() ?: "Subscription activated in Firebase Cloud!"
+                            )
+                        } else {
+                            val localRes = subscriptionManager.redeemActivationCode(code)
+                            localRes.onSuccess { msg ->
+                                _uiState.value = _uiState.value.copy(userNotification = msg)
+                                firestoreSyncRepository.syncUserProfile(nonNullUser, subscriptionState.value)
+                            }.onFailure { err ->
+                                _uiState.value = _uiState.value.copy(
+                                    userNotification = message.ifBlank { err.localizedMessage ?: "Activation failed" }
+                                )
+                            }
+                        }
+                    }
+                } else {
+                    val result = subscriptionManager.redeemActivationCode(code)
+                    _uiState.value = _uiState.value.copy(isLoading = false)
+                    result.onSuccess { msg ->
+                        _uiState.value = _uiState.value.copy(userNotification = msg)
+                    }.onFailure { err ->
+                        _uiState.value = _uiState.value.copy(userNotification = message.ifBlank { err.localizedMessage ?: "Invalid code" })
+                    }
+                }
             }
         }
     }
