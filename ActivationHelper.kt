@@ -2,12 +2,18 @@ package com.yourappname
 
 import android.content.Context
 import android.provider.Settings
-import com.google.firebase.firestore.FieldValue
-import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.database.DataSnapshot
+import com.google.firebase.database.DatabaseError
+import com.google.firebase.database.FirebaseDatabase
+import com.google.firebase.database.ServerValue
+import com.google.firebase.database.ValueEventListener
 import java.util.*
 
 object ActivationHelper {
-    private val db = FirebaseFirestore.getInstance()
+    // یہی وہ ڈیٹا بیس ہے جس میں ابھی SUCCESS آیا تھا
+    private val db = FirebaseDatabase.getInstance(
+        "https://gen-lang-client-0963937245-default-rtdb.firebaseio.com"
+    )
 
     fun getDeviceId(context: Context): String {
         return Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID)
@@ -16,42 +22,59 @@ object ActivationHelper {
     fun autoActivate(context: Context, enteredCode: String, onDone: (Boolean, String) -> Unit) {
         val code = enteredCode.trim().uppercase()
         val deviceId = getDeviceId(context)
-        
-        db.collection("activation_codes").whereEqualTo("code", code).get()
-            .addOnSuccessListener { result ->
-                if (result.isEmpty) {
+
+        if (code.isEmpty()) {
+            onDone(false, "کوڈ لکھیں")
+            return
+        }
+
+        val codeRef = db.getReference("activation_codes").child(code)
+
+        codeRef.addListenerForSingleValueEvent(object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                if (!snapshot.exists()) {
                     onDone(false, "غلط کوڈ ہے")
-                    return@addOnSuccessListener
+                    return
                 }
-                val doc = result.documents[0]
-                val isUsed = doc.getBoolean("isUsed") ?: false
-                val usedDevice = doc.getString("usedByDevice") ?: ""
-                
+
+                val isUsed = snapshot.child("isUsed").getValue(Boolean::class.java) ?: false
+                val usedDevice = snapshot.child("usedByDevice").getValue(String::class.java) ?: ""
+
                 if (isUsed && usedDevice.isNotEmpty() && usedDevice != deviceId) {
                     onDone(false, "یہ کوڈ دوسرے موبائل پر استعمال ہو چکا")
-                    return@addOnSuccessListener
+                    return
                 }
 
                 val calendar = Calendar.getInstance()
                 calendar.add(Calendar.DAY_OF_YEAR, 30)
                 val newExpireDate = calendar.time
 
-                doc.reference.update(
-                    mapOf(
-                        "isUsed" to true,
-                        "usedByDevice" to deviceId,
-                        "activatedAt" to FieldValue.serverTimestamp(),
-                        "expiresAt" to newExpireDate
-                    )
-                ).addOnSuccessListener {
+                val plan = snapshot.child("plan").getValue(String::class.java) ?: "bronze"
+
+                // Realtime DB میں اپڈیٹ
+                val updates = mapOf(
+                    "isUsed" to true,
+                    "usedByDevice" to deviceId,
+                    "activatedAt" to ServerValue.TIMESTAMP,
+                    "expiresAt" to newExpireDate.time,
+                    "plan" to plan
+                )
+
+                codeRef.updateChildren(updates).addOnSuccessListener {
                     val pref = context.getSharedPreferences("app_activation", Context.MODE_PRIVATE)
                     pref.edit().putBoolean("isActivated", true)
-                        .putString("plan", doc.getString("plan") ?: "bronze")
+                        .putString("plan", plan)
                         .putLong("expireTime", newExpireDate.time).apply()
-                    onDone(true, "${doc.getString("plan")} پلان 30 دن کے لیے ایکٹیو ہو گیا")
+                    onDone(true, "$plan پلان 30 دن کے لیے ایکٹیو ہو گیا")
+                }.addOnFailureListener {
+                    onDone(false, "انٹرنیٹ چیک کریں")
                 }
             }
-            .addOnFailureListener { onDone(false, "انٹرنیٹ چیک کریں") }
+
+            override fun onCancelled(error: DatabaseError) {
+                onDone(false, "انٹرنیٹ چیک کریں: ${error.message}")
+            }
+        })
     }
 
     fun isAppActivated(context: Context): Boolean {
