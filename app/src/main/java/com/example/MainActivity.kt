@@ -286,6 +286,8 @@ fun SmartTradeApp(viewModel: TradingViewModel) {
                         onToggleOverlay = { viewModel.toggleOverlay(it) },
                         activeTrades = paperTrades.filter { it.symbol.equals(uiState.currentSymbol, ignoreCase = true) },
                         currentLivePrice = livePrice,
+                        stats = analysis.futuresStats,
+                        symbol = uiState.currentSymbol,
                         isRomanUrdu = uiState.isRomanUrdu,
                         onOpenInstantTrade = { isLong -> viewModel.openPaperTradeInstant(isLong) },
                         onCloseTrade = { trade -> viewModel.closePaperTrade(trade) }

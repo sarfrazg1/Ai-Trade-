@@ -9,6 +9,7 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -21,14 +22,18 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -49,10 +54,12 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
@@ -61,6 +68,7 @@ import com.example.data.local.PaperTradeEntity
 import com.example.domain.calculator.TechnicalIndicatorsCalculator
 import com.example.domain.model.Candle
 import com.example.domain.model.FibonacciAnalysis
+import com.example.domain.model.FuturesStats
 import com.example.domain.model.SmartMoneyConcepts
 import com.example.domain.model.TechnicalIndicators
 import com.example.ui.theme.AccentCyan
@@ -100,29 +108,110 @@ fun CandlestickChart(
     onToggleOverlay: (String) -> Unit,
     activeTrades: List<PaperTradeEntity> = emptyList(),
     currentLivePrice: Double = 0.0,
+    stats: FuturesStats? = null,
+    symbol: String = "BNBUSDT",
     isRomanUrdu: Boolean = false,
     onOpenInstantTrade: (Boolean) -> Unit = {},
     onCloseTrade: (PaperTradeEntity) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    var selectedCandleIndex by remember { mutableStateOf<Int?>(null) }
-    var candleCount by remember { mutableStateOf(28) }
+    var visibleCount by remember { mutableStateOf(28) }
+    var panOffset by remember { mutableStateOf(0) }
+    var isCrosshairActive by remember { mutableStateOf(false) }
+    var crosshairOffset by remember { mutableStateOf<Offset?>(null) }
     var isTradeBarExpanded by remember { mutableStateOf(false) }
     val textMeasurer = rememberTextMeasurer()
 
     val currentActiveTrade = activeTrades.firstOrNull { it.status == "OPEN" }
+
+    // Task 1: Top Info Header Metrics
+    val effectiveLivePrice = if (currentLivePrice > 0) currentLivePrice else stats?.lastPrice ?: candles.lastOrNull()?.close ?: 0.0
+    val baseAsset = symbol.removeSuffix("USDT").ifEmpty { "BNB" }
+    val changePct = stats?.priceChange24h ?: run {
+        val prevClose = candles.dropLast(1).lastOrNull()?.close ?: effectiveLivePrice
+        if (prevClose > 0) ((effectiveLivePrice - prevClose) / prevClose) * 100.0 else 0.0
+    }
+    val isPriceUp = changePct >= 0
+    val markPrice = stats?.markPrice ?: (effectiveLivePrice * 0.9998)
+    val spotPrice = stats?.indexPrice ?: (effectiveLivePrice * 1.0001)
+    val high24h = stats?.high24h ?: (candles.maxOfOrNull { it.high } ?: effectiveLivePrice)
+    val low24h = stats?.low24h ?: (candles.minOfOrNull { it.low } ?: effectiveLivePrice)
+    val vol24h = stats?.volume24h ?: candles.sumOf { it.volume }
+    val turnover24h = vol24h * effectiveLivePrice
 
     Column(
         modifier = modifier
             .fillMaxSize()
             .background(CryptoBackground)
     ) {
+        // TASK 1: Professional Top Info Header (Exchange Style)
+        Surface(
+            color = Color(0xFF090C12),
+            modifier = Modifier
+                .fillMaxWidth()
+                .border(BorderStroke(0.6.dp, CryptoCardBorder))
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 10.dp, vertical = 7.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Left Column: Big Bold Last Price + Mark, Spot & %
+                Column(modifier = Modifier.weight(1.15f)) {
+                    Text(
+                        text = formatHeaderPrice(effectiveLivePrice),
+                        fontSize = 25.sp,
+                        fontWeight = FontWeight.Black,
+                        fontFamily = FontFamily.SansSerif,
+                        color = if (isPriceUp) BullGreen else BearRed,
+                        letterSpacing = (-0.5).sp
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text(
+                            text = "Mark ${formatShortPrice(markPrice)}",
+                            fontSize = 11.sp,
+                            color = TextMuted
+                        )
+                        Text(
+                            text = "Spot ${baseAsset}/USDT ${formatShortPrice(spotPrice)}",
+                            fontSize = 11.sp,
+                            color = TextSecondary
+                        )
+                        Text(
+                            text = "${if (isPriceUp) "+" else ""}${String.format(Locale.US, "%.2f", changePct)}%",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (isPriceUp) BullGreen else BearRed
+                        )
+                    }
+                }
+
+                // Right Column: 4 compact rows: 24h High, 24h Low, 24h Vol, 24h Turnover
+                Column(
+                    modifier = Modifier.weight(0.95f),
+                    horizontalAlignment = Alignment.End,
+                    verticalArrangement = Arrangement.spacedBy(1.5.dp)
+                ) {
+                    HeaderStatRow("24h High", formatShortPrice(high24h))
+                    HeaderStatRow("24h Low", formatShortPrice(low24h))
+                    HeaderStatRow("24h Vol ($baseAsset)", formatCompactNumber(vol24h))
+                    HeaderStatRow("24h Turnover (USDT)", formatCompactNumber(turnover24h))
+                }
+            }
+        }
+
         // Ultra-compact sleek overlay controls & candle density toolbar
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .horizontalScroll(rememberScrollState())
-                .padding(horizontal = 8.dp, vertical = 2.dp),
+                .padding(horizontal = 8.dp, vertical = 3.dp),
             horizontalArrangement = Arrangement.spacedBy(4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -143,14 +232,14 @@ fun CandlestickChart(
             )
             Spacer(modifier = Modifier.width(3.dp))
 
-            // Candle Density / Zoom Selector (20C, 28C, 40C)
+            // Candle Density / Zoom Preset Selector (20C, 28C, 40C)
             listOf(20, 28, 40).forEach { count ->
-                val isSel = candleCount == count
+                val isSel = visibleCount == count
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(4.dp))
                         .background(if (isSel) BullGreen.copy(alpha = 0.25f) else CryptoSurfaceVariant)
-                        .clickable { candleCount = count }
+                        .clickable { visibleCount = count }
                         .padding(horizontal = 6.dp, vertical = 2.dp)
                 ) {
                     Text(
@@ -163,8 +252,8 @@ fun CandlestickChart(
             }
         }
 
-        // Main Chart Canvas with Floating HUD inside Box (0dp layout displacement)
-        Box(
+        // Main Chart Canvas with Floating HUD inside BoxWithConstraints (0dp layout displacement)
+        BoxWithConstraints(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
@@ -178,13 +267,20 @@ fun CandlestickChart(
                     )
                 }
             } else {
-                val visibleCandles = candles.takeLast(candleCount.coerceAtMost(candles.size))
-                var minPrice = visibleCandles.minOf { it.low }
-                var maxPrice = visibleCandles.maxOf { it.high }
+                // TASK 3: Zoom and Pan slice computation
+                val totalCandles = candles.size
+                val maxPan = (totalCandles - visibleCount).coerceAtLeast(0)
+                val effectivePan = panOffset.coerceIn(0, maxPan)
+                val endIndex = (totalCandles - effectivePan).coerceIn(visibleCount.coerceAtMost(totalCandles), totalCandles)
+                val startIndex = (endIndex - visibleCount).coerceAtLeast(0)
+                val visibleCandles = candles.subList(startIndex, endIndex)
 
-                if (currentLivePrice > 0) {
-                    minPrice = minOf(minPrice, currentLivePrice)
-                    maxPrice = maxOf(maxPrice, currentLivePrice)
+                var minPrice = visibleCandles.minOfOrNull { it.low } ?: 0.0
+                var maxPrice = visibleCandles.maxOfOrNull { it.high } ?: 1.0
+
+                if (effectiveLivePrice > 0) {
+                    minPrice = minOf(minPrice, effectiveLivePrice)
+                    maxPrice = maxOf(maxPrice, effectiveLivePrice)
                 }
 
                 if (currentActiveTrade != null) {
@@ -200,19 +296,102 @@ fun CandlestickChart(
                 Canvas(
                     modifier = Modifier
                         .fillMaxSize()
-                        .pointerInput(visibleCandles) {
-                            detectTapGestures { offset ->
-                                val slotW = size.width / visibleCandles.size
-                                val index = (offset.x / slotW).toInt().coerceIn(0, visibleCandles.size - 1)
-                                val originalIndex = candles.size - visibleCandles.size + index
-                                selectedCandleIndex = if (selectedCandleIndex == originalIndex) null else originalIndex
+                        .pointerInput(candles.size, visibleCount, panOffset) {
+                            awaitPointerEventScope {
+                                while (true) {
+                                    val down = awaitFirstDown(requireUnconsumed = false)
+                                    val downTime = System.currentTimeMillis()
+                                    val downPos = down.position
+                                    var isLongPressTriggered = false
+                                    var isTransforming = false
+                                    var zoomAcc = 1f
+                                    var panAcc = 0f
+
+                                    do {
+                                        val event = awaitPointerEvent()
+                                        val pointers = event.changes
+                                        val pointerCount = pointers.size
+
+                                        if (pointerCount >= 2) {
+                                            // Two fingers: Pinch to zoom in / zoom out
+                                            isTransforming = true
+                                            isLongPressTriggered = false
+                                            isCrosshairActive = false
+
+                                            val p1Prev = pointers[0].previousPosition
+                                            val p2Prev = pointers[1].previousPosition
+                                            val p1Curr = pointers[0].position
+                                            val p2Curr = pointers[1].position
+
+                                            val prevSpan = (p1Prev - p2Prev).getDistance()
+                                            val currSpan = (p1Curr - p2Curr).getDistance()
+
+                                            if (prevSpan > 10f && currSpan > 10f) {
+                                                val factor = currSpan / prevSpan
+                                                zoomAcc *= factor
+                                                if (zoomAcc > 1.10f) {
+                                                    visibleCount = (visibleCount - 3).coerceAtLeast(8)
+                                                    zoomAcc = 1f
+                                                } else if (zoomAcc < 0.90f) {
+                                                    visibleCount = (visibleCount + 3).coerceAtMost(candles.size.coerceAtLeast(8))
+                                                    zoomAcc = 1f
+                                                }
+                                            }
+                                            pointers.forEach { it.consume() }
+                                        } else if (pointerCount == 1) {
+                                            val p = pointers.first()
+                                            val elapsed = System.currentTimeMillis() - downTime
+                                            val moveDist = (p.position - downPos).getDistance()
+
+                                            if (!isTransforming && elapsed > 350 && moveDist < 25f) {
+                                                // Long press detected -> activate crosshair
+                                                isLongPressTriggered = true
+                                                isCrosshairActive = true
+                                                crosshairOffset = p.position
+                                                p.consume()
+                                            } else if (isLongPressTriggered) {
+                                                // Dragging crosshair
+                                                crosshairOffset = p.position
+                                                p.consume()
+                                            } else if (moveDist > 12f) {
+                                                // Single finger dragging -> Pan left/right
+                                                isTransforming = true
+                                                val dx = p.position.x - p.previousPosition.x
+                                                panAcc += dx
+                                                val slotW = size.width / visibleCandles.size.coerceAtLeast(1)
+                                                if (slotW > 0f) {
+                                                    val candleShift = (panAcc / slotW).toInt()
+                                                    if (candleShift != 0) {
+                                                        val maxP = (candles.size - visibleCount).coerceAtLeast(0)
+                                                        panOffset = (panOffset + candleShift).coerceIn(0, maxP)
+                                                        panAcc -= candleShift * slotW
+                                                    }
+                                                }
+                                                p.consume()
+                                            }
+                                        }
+                                    } while (pointers.any { it.pressed })
+
+                                    // Tap handling
+                                    val totalDuration = System.currentTimeMillis() - downTime
+                                    val totalMove = (downPos - (crosshairOffset ?: downPos)).getDistance()
+                                    if (!isTransforming && !isLongPressTriggered && totalDuration < 300 && totalMove < 20f) {
+                                        if (isCrosshairActive) {
+                                            isCrosshairActive = false
+                                            crosshairOffset = null
+                                        } else {
+                                            isCrosshairActive = true
+                                            crosshairOffset = downPos
+                                        }
+                                    }
+                                }
                             }
                         }
                 ) {
                     val canvasWidth = size.width
                     val canvasHeight = size.height
-                    val slotWidth = canvasWidth / visibleCandles.size
-                    val candleBodyWidth = (slotWidth * 0.72f).coerceIn(4f, 24f)
+                    val slotWidth = canvasWidth / visibleCandles.size.coerceAtLeast(1)
+                    val candleBodyWidth = (slotWidth * 0.72f).coerceIn(4f, 26f)
 
                     // 1. Draw Grid Lines and Price Axis
                     drawChartGrid(
@@ -223,7 +402,7 @@ fun CandlestickChart(
                         height = canvasHeight
                     )
 
-                    // 2. Draw Fibonacci Overlays
+                    // 2. Draw Fibonacci Overlays with 61.8% Golden Zone
                     if (showFibonacci && fibonacci != null) {
                         drawFibonacciOverlay(fibonacci, chartMin, chartMax, canvasWidth, canvasHeight, textMeasurer)
                     }
@@ -283,34 +462,7 @@ fun CandlestickChart(
                         )
                     }
 
-                    // 6. Crosshair if candle selected
-                    selectedCandleIndex?.let { selIdx ->
-                        val visibleIdx = selIdx - (candles.size - visibleCandles.size)
-                        if (visibleIdx in visibleCandles.indices) {
-                            val selC = visibleCandles[visibleIdx]
-                            val xCross = visibleIdx * slotWidth + slotWidth / 2f
-                            val yCross = (canvasHeight * (1.0 - (selC.close - chartMin) / priceRange)).toFloat()
-
-                            // Vertical crosshair
-                            drawLine(
-                                color = TextMuted.copy(alpha = 0.6f),
-                                start = Offset(xCross, 0f),
-                                end = Offset(xCross, canvasHeight),
-                                strokeWidth = 1.0f,
-                                pathEffect = PathEffect.dashPathEffect(floatArrayOf(4f, 4f))
-                            )
-                            // Horizontal crosshair
-                            drawLine(
-                                color = TextMuted.copy(alpha = 0.6f),
-                                start = Offset(0f, yCross),
-                                end = Offset(canvasWidth, yCross),
-                                strokeWidth = 1.0f,
-                                pathEffect = PathEffect.dashPathEffect(floatArrayOf(4f, 4f))
-                            )
-                        }
-                    }
-
-                    // 7. Draw Technical Indicator Overlays: EMAs & Bollinger Bands
+                    // 6. Draw Technical Indicator Overlays: EMAs & Bollinger Bands
                     if (showEma) {
                         drawEmaLine(candles, visibleCandles, 20, chartMin, priceRange, slotWidth, canvasHeight, AccentCyan)
                         drawEmaLine(candles, visibleCandles, 50, chartMin, priceRange, slotWidth, canvasHeight, WarningAmber)
@@ -320,35 +472,119 @@ fun CandlestickChart(
                         drawBollingerOverlay(candles, visibleCandles, chartMin, priceRange, slotWidth, canvasHeight)
                     }
 
-                    // 8. Draw BOS / CHoCH Lines
+                    // 7. Draw BOS / CHoCH Lines
                     if (showBos) {
                         drawBosLines(smc, visibleCandles, candles.size, slotWidth, chartMin, priceRange, canvasHeight, textMeasurer)
                     }
 
-                    // 9. Live Price Line (Cyan dashed with badge on right)
-                    if (currentLivePrice in chartMin..chartMax) {
-                        val yLive = (canvasHeight * (1.0 - (currentLivePrice - chartMin) / priceRange)).toFloat()
+                    // 8. TASK 2: Current Price Floating Label on the right edge (always visible, moving up/down)
+                    if (effectiveLivePrice > 0.0) {
+                        val yLive = (canvasHeight * (1.0 - (effectiveLivePrice - chartMin) / priceRange)).toFloat().coerceIn(14f, canvasHeight - 14f)
+                        val isPriceBullish = effectiveLivePrice >= (visibleCandles.dropLast(1).lastOrNull()?.close ?: effectiveLivePrice)
+                        val priceColor = if (isPriceBullish) BullGreen else BearRed
+
+                        // Horizontal dashed line across the chart
                         drawLine(
-                            color = AccentCyan,
+                            color = priceColor.copy(alpha = 0.85f),
                             start = Offset(0f, yLive),
-                            end = Offset(canvasWidth, yLive),
-                            strokeWidth = 1.5f,
+                            end = Offset(canvasWidth - 62f, yLive),
+                            strokeWidth = 1.6f,
                             pathEffect = PathEffect.dashPathEffect(floatArrayOf(6f, 4f))
                         )
-                        val liveText = formatShortPrice(currentLivePrice)
+
+                        // Floating Label Box on right edge
+                        val liveText = formatShortPrice(effectiveLivePrice)
                         val liveLayout = textMeasurer.measure(
                             text = liveText,
-                            style = TextStyle(fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+                            style = TextStyle(fontSize = 10.sp, fontWeight = FontWeight.ExtraBold, color = Color.Black)
                         )
+                        val badgeWidth = liveLayout.size.width + 12f
+                        val badgeHeight = liveLayout.size.height + 6f
+                        val badgeLeft = canvasWidth - badgeWidth - 2f
+                        val badgeTop = yLive - badgeHeight / 2f
+
+                        // Outer border shadow
                         drawRoundRect(
-                            color = AccentCyan,
-                            topLeft = Offset(canvasWidth - liveLayout.size.width - 14f, yLive - liveLayout.size.height / 2f - 2f),
-                            size = Size(liveLayout.size.width + 12f, liveLayout.size.height + 4f),
-                            cornerRadius = androidx.compose.ui.geometry.CornerRadius(4f, 4f)
+                            color = Color.Black.copy(alpha = 0.6f),
+                            topLeft = Offset(badgeLeft - 1f, badgeTop - 1f),
+                            size = Size(badgeWidth + 2f, badgeHeight + 2f),
+                            cornerRadius = CornerRadius(4f, 4f)
                         )
+                        // Floating badge body
+                        drawRoundRect(
+                            color = priceColor,
+                            topLeft = Offset(badgeLeft, badgeTop),
+                            size = Size(badgeWidth, badgeHeight),
+                            cornerRadius = CornerRadius(4f, 4f)
+                        )
+                        // Label text inside badge
                         drawText(
                             textLayoutResult = liveLayout,
-                            topLeft = Offset(canvasWidth - liveLayout.size.width - 8f, yLive - liveLayout.size.height / 2f)
+                            topLeft = Offset(badgeLeft + 6f, badgeTop + 3f)
+                        )
+                    }
+
+                    // 9. Crosshair Lines on Long Press / Tap
+                    if (isCrosshairActive && crosshairOffset != null && visibleCandles.isNotEmpty()) {
+                        val activeIndex = ((crosshairOffset!!.x) / slotWidth).toInt().coerceIn(0, visibleCandles.size - 1)
+                        val selC = visibleCandles[activeIndex]
+                        val xCross = activeIndex * slotWidth + slotWidth / 2f
+                        val yCross = crosshairOffset!!.y.coerceIn(0f, canvasHeight)
+                        val crosshairPrice = chartMax - (yCross / canvasHeight) * priceRange
+
+                        // Vertical crosshair
+                        drawLine(
+                            color = AccentCyan.copy(alpha = 0.85f),
+                            start = Offset(xCross, 0f),
+                            end = Offset(xCross, canvasHeight),
+                            strokeWidth = 1.2f,
+                            pathEffect = PathEffect.dashPathEffect(floatArrayOf(5f, 4f))
+                        )
+                        // Horizontal crosshair
+                        drawLine(
+                            color = AccentCyan.copy(alpha = 0.85f),
+                            start = Offset(0f, yCross),
+                            end = Offset(canvasWidth, yCross),
+                            strokeWidth = 1.2f,
+                            pathEffect = PathEffect.dashPathEffect(floatArrayOf(5f, 4f))
+                        )
+
+                        // Floating price badge at crosshair on right axis
+                        val crosshairPriceText = formatShortPrice(crosshairPrice)
+                        val priceLayout = textMeasurer.measure(
+                            text = crosshairPriceText,
+                            style = TextStyle(fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                        )
+                        val cpBadgeW = priceLayout.size.width + 10f
+                        val cpBadgeH = priceLayout.size.height + 4f
+                        drawRoundRect(
+                            color = Color(0xFF2A2E39),
+                            topLeft = Offset(canvasWidth - cpBadgeW - 2f, yCross - cpBadgeH / 2f),
+                            size = Size(cpBadgeW, cpBadgeH),
+                            cornerRadius = CornerRadius(3f, 3f)
+                        )
+                        drawText(
+                            textLayoutResult = priceLayout,
+                            topLeft = Offset(canvasWidth - cpBadgeW + 3f, yCross - cpBadgeH / 2f + 2f)
+                        )
+
+                        // Floating time badge at crosshair on bottom
+                        val timeStr = SimpleDateFormat("MM-dd HH:mm", Locale.getDefault()).format(Date(selC.time))
+                        val timeLayout = textMeasurer.measure(
+                            text = timeStr,
+                            style = TextStyle(fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                        )
+                        val ctBadgeW = timeLayout.size.width + 10f
+                        val ctBadgeH = timeLayout.size.height + 4f
+                        drawRoundRect(
+                            color = Color(0xFF2A2E39),
+                            topLeft = Offset((xCross - ctBadgeW / 2f).coerceIn(4f, canvasWidth - ctBadgeW - 4f), canvasHeight - ctBadgeH - 2f),
+                            size = Size(ctBadgeW, ctBadgeH),
+                            cornerRadius = CornerRadius(3f, 3f)
+                        )
+                        drawText(
+                            textLayoutResult = timeLayout,
+                            topLeft = Offset((xCross - ctBadgeW / 2f).coerceIn(4f, canvasWidth - ctBadgeW - 4f) + 5f, canvasHeight - ctBadgeH)
                         )
                     }
 
@@ -367,8 +603,15 @@ fun CandlestickChart(
                     }
                 }
 
-                // Floating Candle HUD Overlay (zero vertical layout cost)
-                val displayCandle = selectedCandleIndex?.let { candles.getOrNull(it) } ?: visibleCandles.lastOrNull()
+                // Floating Candle HUD / OHLC Banner (shows inspected candle on long-press or tap, or latest candle)
+                val displayCandle = if (isCrosshairActive && crosshairOffset != null && visibleCandles.isNotEmpty()) {
+                    val slotW = constraints.maxWidth.toFloat() / visibleCandles.size.coerceAtLeast(1)
+                    val idx = ((crosshairOffset!!.x) / slotW).toInt().coerceIn(0, visibleCandles.size - 1)
+                    visibleCandles[idx]
+                } else {
+                    visibleCandles.lastOrNull()
+                }
+
                 if (displayCandle != null) {
                     val dateStr = SimpleDateFormat("MM-dd HH:mm", Locale.getDefault()).format(Date(displayCandle.time))
                     val diff = displayCandle.close - displayCandle.open
@@ -376,9 +619,9 @@ fun CandlestickChart(
                     val isBull = displayCandle.isBullish
 
                     Surface(
-                        color = CryptoSurface.copy(alpha = 0.88f),
+                        color = CryptoSurface.copy(alpha = 0.90f),
                         shape = RoundedCornerShape(6.dp),
-                        border = androidx.compose.foundation.BorderStroke(0.6.dp, CryptoCardBorder),
+                        border = BorderStroke(0.6.dp, CryptoCardBorder),
                         modifier = Modifier
                             .align(Alignment.TopStart)
                             .padding(start = 6.dp, top = 4.dp)
@@ -398,6 +641,110 @@ fun CandlestickChart(
                                 fontWeight = FontWeight.Bold,
                                 color = if (isBull) BullGreen else BearRed
                             )
+                            if (isCrosshairActive) {
+                                Icon(
+                                    imageVector = Icons.Default.Close,
+                                    contentDescription = "Clear crosshair",
+                                    tint = TextMuted,
+                                    modifier = Modifier
+                                        .size(14.dp)
+                                        .clickable {
+                                            isCrosshairActive = false
+                                            crosshairOffset = null
+                                        }
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // TASK 3: Floating Zoom Buttons (+ and -) and Reset Live Pill
+                Row(
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(end = 56.dp, bottom = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    if (panOffset > 0) {
+                        Surface(
+                            color = BullGreen.copy(alpha = 0.22f),
+                            border = BorderStroke(0.8.dp, BullGreen),
+                            shape = RoundedCornerShape(6.dp),
+                            modifier = Modifier
+                                .clickable { panOffset = 0 }
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 7.dp, vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.PlayArrow,
+                                    contentDescription = "Jump to live candle",
+                                    tint = BullGreen,
+                                    modifier = Modifier.size(12.dp)
+                                )
+                                Spacer(modifier = Modifier.width(3.dp))
+                                Text(
+                                    text = "LIVE",
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = BullGreen
+                                )
+                            }
+                        }
+                    }
+
+                    // Zoom Controls Pill (+ and - buttons)
+                    Surface(
+                        color = CryptoSurface.copy(alpha = 0.90f),
+                        border = BorderStroke(0.8.dp, CryptoCardBorder),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(2.dp)
+                        ) {
+                            // Zoom In Button (+)
+                            IconButton(
+                                onClick = {
+                                    visibleCount = (visibleCount - 4).coerceAtLeast(8)
+                                },
+                                modifier = Modifier
+                                    .size(28.dp)
+                                    .testTag("zoom_in_button")
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Add,
+                                    contentDescription = "Zoom In",
+                                    tint = TextPrimary,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+
+                            Box(
+                                modifier = Modifier
+                                    .width(1.dp)
+                                    .height(16.dp)
+                                    .background(CryptoCardBorder)
+                            )
+
+                            // Zoom Out Button (-)
+                            IconButton(
+                                onClick = {
+                                    visibleCount = (visibleCount + 4).coerceAtMost(candles.size.coerceAtLeast(8))
+                                },
+                                modifier = Modifier
+                                    .size(28.dp)
+                                    .testTag("zoom_out_button")
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Remove,
+                                    contentDescription = "Zoom Out",
+                                    tint = TextPrimary,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
                         }
                     }
                 }
@@ -1098,10 +1445,49 @@ private fun DrawScope.drawBosLines(
     }
 }
 
-private fun formatShortPrice(p: Double): String {
+private fun formatHeaderPrice(p: Double): String {
     return when {
-        p >= 1000.0 -> String.format("%,.1f", p)
-        p >= 1.0 -> String.format("%.2f", p)
-        else -> String.format("%.4f", p)
+        p >= 1000.0 -> String.format(Locale.US, "%,.2f", p)
+        p >= 1.0 -> String.format(Locale.US, "%.2f", p)
+        else -> String.format(Locale.US, "%.4f", p)
     }
 }
+
+private fun formatShortPrice(p: Double): String {
+    return when {
+        p >= 1000.0 -> String.format(Locale.US, "%,.1f", p)
+        p >= 1.0 -> String.format(Locale.US, "%.2f", p)
+        else -> String.format(Locale.US, "%.4f", p)
+    }
+}
+
+@Composable
+private fun HeaderStatRow(label: String, value: String) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = label,
+            fontSize = 9.sp,
+            color = TextMuted
+        )
+        Text(
+            text = value,
+            fontSize = 9.sp,
+            fontWeight = FontWeight.Medium,
+            fontFamily = FontFamily.Monospace,
+            color = TextPrimary
+        )
+    }
+}
+
+private fun formatCompactNumber(number: Double): String {
+    return when {
+        number >= 1_000_000_000.0 -> String.format(Locale.US, "%.2fB", number / 1_000_000_000.0)
+        number >= 1_000_000.0 -> String.format(Locale.US, "%.2fM", number / 1_000_000.0)
+        number >= 1_000.0 -> String.format(Locale.US, "%.2fK", number / 1_000.0)
+        else -> String.format(Locale.US, "%.2f", number)
+    }
+}
+
