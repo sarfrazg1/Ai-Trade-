@@ -437,27 +437,31 @@ class SubscriptionManager(private val context: Context) {
         val consentTime = if (prefs.contains("consent_timestamp")) prefs.getLong("consent_timestamp", 0L) else null
 
         // Check if activated via Firebase Realtime Database (ActivationHelper)
-        if (com.example.ActivationHelper.isAppActivated(context)) {
-            val rtdbPlanStr = com.example.ActivationHelper.getActivatedPlan(context)?.lowercase() ?: "bronze"
-            val rtdbPlan = when (rtdbPlanStr) {
-                "golden", "gold" -> SubscriptionPlan.GOLDEN
-                "silver" -> SubscriptionPlan.SILVER
-                else -> SubscriptionPlan.BRONZE
+        try {
+            if (com.example.ActivationHelper.isAppActivated(context)) {
+                val rtdbPlanStr = com.example.ActivationHelper.getActivatedPlan(context)?.lowercase() ?: "bronze"
+                val rtdbPlan = when (rtdbPlanStr) {
+                    "golden", "gold" -> SubscriptionPlan.GOLDEN
+                    "silver" -> SubscriptionPlan.SILVER
+                    else -> SubscriptionPlan.BRONZE
+                }
+                val rtdbExpiry = com.example.ActivationHelper.getActivatedExpiry(context)
+                val rtdbCode = com.example.ActivationHelper.getActivatedCode(context) ?: prefs.getString("active_code", "RTDB-ACTIVE")
+                return UserSubscriptionState(
+                    userReference = userRef,
+                    currentPlan = rtdbPlan,
+                    status = SubscriptionStatus.ACTIVE,
+                    activationCode = rtdbCode,
+                    activatedAt = prefs.getLong("activated_at", System.currentTimeMillis()),
+                    expiresAt = rtdbExpiry,
+                    referralCode = referral,
+                    termsAccepted = terms,
+                    disclaimerAccepted = disclaimer,
+                    consentTimestamp = consentTime
+                )
             }
-            val rtdbExpiry = com.example.ActivationHelper.getActivatedExpiry(context)
-            val rtdbCode = com.example.ActivationHelper.getActivatedCode(context) ?: prefs.getString("active_code", "RTDB-ACTIVE")
-            return UserSubscriptionState(
-                userReference = userRef,
-                currentPlan = rtdbPlan,
-                status = SubscriptionStatus.ACTIVE,
-                activationCode = rtdbCode,
-                activatedAt = prefs.getLong("activated_at", System.currentTimeMillis()),
-                expiresAt = rtdbExpiry,
-                referralCode = referral,
-                termsAccepted = terms,
-                disclaimerAccepted = disclaimer,
-                consentTimestamp = consentTime
-            )
+        } catch (e: Exception) {
+            android.util.Log.e("SubscriptionManager", "Safe check for RTDB activation error", e)
         }
 
         val planId = prefs.getString("active_plan_id", SubscriptionPlan.FREE_TRIAL.id)

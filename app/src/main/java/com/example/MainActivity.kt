@@ -78,7 +78,17 @@ class MainActivity : ComponentActivity() {
         viewModel.attachActivity(this)
         try {
             if (com.google.firebase.FirebaseApp.getApps(this).isEmpty()) {
-                com.google.firebase.FirebaseApp.initializeApp(this)
+                val app = com.google.firebase.FirebaseApp.initializeApp(this)
+                if (app == null) {
+                    val options = com.google.firebase.FirebaseOptions.Builder()
+                        .setApplicationId("1:613712404065:android:7aa69d4126a01da247d420")
+                        .setApiKey("AIzaSyBhZqkU9ZJWnIASKM4LSQ2Me3X_qLkTLG0")
+                        .setProjectId("gen-lang-client-0963937245")
+                        .setStorageBucket("gen-lang-client-0963937245.firebasestorage.app")
+                        .setDatabaseUrl("https://gen-lang-client-0963937245-default-rtdb.firebaseio.com")
+                        .build()
+                    com.google.firebase.FirebaseApp.initializeApp(this, options)
+                }
             }
         } catch (e: Exception) {
             android.util.Log.e("MainActivity", "Firebase initialization check in onCreate", e)

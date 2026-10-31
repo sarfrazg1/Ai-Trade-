@@ -27,7 +27,16 @@ class GoogleAuthManager(private val context: Context) {
 
     private val auth: FirebaseAuth? = try {
         if (com.google.firebase.FirebaseApp.getApps(context).isEmpty()) {
-            com.google.firebase.FirebaseApp.initializeApp(context)
+            val app = com.google.firebase.FirebaseApp.initializeApp(context)
+            if (app == null) {
+                val options = com.google.firebase.FirebaseOptions.Builder()
+                    .setApplicationId("1:613712404065:android:7aa69d4126a01da247d420")
+                    .setApiKey("AIzaSyBhZqkU9ZJWnIASKM4LSQ2Me3X_qLkTLG0")
+                    .setProjectId("gen-lang-client-0963937245")
+                    .setStorageBucket("gen-lang-client-0963937245.firebasestorage.app")
+                    .build()
+                com.google.firebase.FirebaseApp.initializeApp(context, options)
+            }
         }
         FirebaseAuth.getInstance()
     } catch (e: Exception) {
@@ -68,11 +77,11 @@ class GoogleAuthManager(private val context: Context) {
         val targetContext = resolvedActivity ?: launcherContext ?: context
 
         return try {
-            val resId = targetContext.resources.getIdentifier("default_web_client_id", "string", targetContext.packageName)
-            val webClientId = if (resId != 0) {
-                targetContext.getString(resId)
-            } else {
-                targetContext.getString(R.string.default_web_client_id)
+            val webClientId = try {
+                val resId = targetContext.resources.getIdentifier("default_web_client_id", "string", targetContext.packageName)
+                if (resId != 0) targetContext.getString(resId) else "613712404065-2q4tn20buj6lf6rhn4idtnpdeie9d44g.apps.googleusercontent.com"
+            } catch (_: Exception) {
+                "613712404065-2q4tn20buj6lf6rhn4idtnpdeie9d44g.apps.googleusercontent.com"
             }
             val signInOption = GetSignInWithGoogleOption.Builder(serverClientId = webClientId)
                 .build()

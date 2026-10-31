@@ -19,11 +19,28 @@ import kotlinx.coroutines.tasks.await
 private fun getFirestoreSafe(context: Context): FirebaseFirestore? {
     return try {
         if (FirebaseApp.getApps(context).isEmpty()) {
-            FirebaseApp.initializeApp(context)
+            val app = FirebaseApp.initializeApp(context)
+            if (app == null) {
+                val options = com.google.firebase.FirebaseOptions.Builder()
+                    .setApplicationId("1:613712404065:android:7aa69d4126a01da247d420")
+                    .setApiKey("AIzaSyBhZqkU9ZJWnIASKM4LSQ2Me3X_qLkTLG0")
+                    .setProjectId("gen-lang-client-0963937245")
+                    .setStorageBucket("gen-lang-client-0963937245.firebasestorage.app")
+                    .build()
+                FirebaseApp.initializeApp(context, options)
+            }
         }
-        val dbId = context.applicationContext.getString(R.string.firestore_database_id)
+        val dbId = try {
+            context.applicationContext.getString(R.string.firestore_database_id)
+        } catch (_: Exception) {
+            ""
+        }
         if (dbId.isNotBlank()) {
-            FirebaseFirestore.getInstance(FirebaseApp.getInstance(), dbId)
+            try {
+                FirebaseFirestore.getInstance(FirebaseApp.getInstance(), dbId)
+            } catch (_: Exception) {
+                FirebaseFirestore.getInstance()
+            }
         } else {
             FirebaseFirestore.getInstance()
         }
