@@ -50,79 +50,145 @@ object ActivationHelper {
     }
 
     fun autoActivate(context: Context, enteredCode: String, onDone: (Boolean, String) -> Unit) {
-        val code = enteredCode.trim().uppercase()
+        val code = enteredCode.trim()
         val deviceId = getDeviceId(context)
 
         if (code.isEmpty()) {
-            onDone(false, "کوڈ لکھیں / Please enter activation code")
+            onDone(false, "Invalid Code")
             return
         }
 
         val database = getDatabase(context)
         if (database == null) {
-            onDone(false, "انٹرنیٹ یا فائر بیس سروس چیک کریں / Firebase service unavailable")
+            onDone(false, "Firebase service unavailable")
             return
         }
 
         try {
-            val codeRef = database.getReference("activation_codes").child(code)
+            // Reference activation_codes -> activationCodes
+            val activationCodesRef = database.getReference("activation_codes")
 
-            codeRef.addListenerForSingleValueEvent(object : ValueEventListener {
+            activationCodesRef.addListenerForSingleValueEvent(object : ValueEventListener {
                 override fun onDataChange(snapshot: DataSnapshot) {
                     try {
-                        if (!snapshot.exists()) {
-                            onDone(false, "غلط کوڈ ہے / Invalid code")
-                            return
+                        val candidateList: Iterable<DataSnapshot>? = when {
+                            snapshot.hasChild("activationCodes") -> snapshot.child("activationCodes").children
+                            snapshot.exists() && snapshot.childrenCount > 0 -> snapshot.children
+                            else -> null
                         }
 
-                        val isUsed = snapshot.child("isUsed").getValue(Boolean::class.java) ?: false
-                        val usedDevice = snapshot.child("usedByDevice").getValue(String::class.java) ?: ""
+                        if (candidateList != null) {
+                            searchAndProcessCode(context, candidateList, code, deviceId, onDone)
+                        } else {
+                            // Fallback check root 'activationCodes'
+                            database.getReference("activationCodes").addListenerForSingleValueEvent(object : ValueEventListener {
+                                override fun onDataChange(altSnapshot: DataSnapshot) {
+                                    if (altSnapshot.exists() && altSnapshot.childrenCount > 0) {
+                                        searchAndProcessCode(context, altSnapshot.children, code, deviceId, onDone)
+                                    } else {
+                                        onDone(false, "Invalid Code")
+                                    }
+                                }
 
-                        if (isUsed && usedDevice.isNotEmpty() && usedDevice != deviceId) {
-                            onDone(false, "یہ کوڈ دوسرے موبائل پر استعمال ہو چکا / Code already used on another device")
-                            return
-                        }
-
-                        val calendar = Calendar.getInstance()
-                        calendar.add(Calendar.DAY_OF_YEAR, 30)
-                        val newExpireDate = calendar.time
-
-                        val plan = snapshot.child("plan").getValue(String::class.java) ?: "bronze"
-
-                        // Realtime DB updates
-                        val updates = mapOf(
-                            "isUsed" to true,
-                            "usedByDevice" to deviceId,
-                            "activatedAt" to ServerValue.TIMESTAMP,
-                            "expiresAt" to newExpireDate.time,
-                            "plan" to plan
-                        )
-
-                        codeRef.updateChildren(updates).addOnSuccessListener {
-                            try {
-                                val pref = context.getSharedPreferences("app_activation", Context.MODE_PRIVATE)
-                                pref.edit().putBoolean("isActivated", true)
-                                    .putString("plan", plan)
-                                    .putString("active_code", code)
-                                    .putLong("expireTime", newExpireDate.time).apply()
-                                onDone(true, "$plan پلان 30 دن کے لیے ایکٹیو ہو گیا / $plan plan activated for 30 days")
-                            } catch (e: Exception) {
-                                onDone(true, "$plan پلان ایکٹیو ہو گیا")
-                            }
-                        }.addOnFailureListener { err ->
-                            onDone(false, "انٹرنیٹ چیک کریں: ${err.localizedMessage ?: "Database update failed"}")
+                                override fun onCancelled(error: DatabaseError) {
+                                    Log.e("ActivationHelper", "Database error: ${error.message}")
+                                    onDone(false, "Invalid Code")
+                                }
+                            })
                         }
                     } catch (e: Exception) {
-                        onDone(false, "خرابی: ${e.localizedMessage ?: "Activation processing error"}")
+                        Log.e("ActivationHelper", "Error processing activation codes", e)
+                        onDone(false, "Invalid Code")
                     }
                 }
 
                 override fun onCancelled(error: DatabaseError) {
-                    onDone(false, "انٹرنیٹ چیک کریں / Database error: ${error.message}")
+                    Log.e("ActivationHelper", "Database error: ${error.message}")
+                    onDone(false, "Database error: ${error.message}")
                 }
             })
         } catch (e: Exception) {
-            onDone(false, "فائر بیس سروس چیک کریں / Firebase error: ${e.localizedMessage}")
+            Log.e("ActivationHelper", "Firebase error: ${e.localizedMessage}")
+            onDone(false, "Firebase error: ${e.localizedMessage ?: "Unknown"}")
+        }
+    }
+
+    private fun searchAndProcessCode(
+        context: Context,
+        codesList: Iterable<DataSnapshot>,
+        enteredCode: String,
+        deviceId: String,
+        onDone: (Boolean, String) -> Unit
+    ) {
+        val targetCode = enteredCode.trim()
+        var matchedChild: DataSnapshot? = null
+        var matchedCode = ""
+        var matchedPlan = "GOLDEN"
+        var matchedStatus = ""
+
+        // Loop through entire activationCodes list and search for entered code (do not search by direct child path)
+        for (item in codesList) {
+            val codeVal = item.child("code").getValue(String::class.java)?.trim() ?: ""
+            if (codeVal.equals(targetCode, ignoreCase = true) ||
+                codeVal.replace("-", "").equals(targetCode.replace("-", ""), ignoreCase = true)
+            ) {
+                matchedChild = item
+                matchedCode = codeVal
+                matchedPlan = item.child("plan").getValue(String::class.java)?.trim() ?: "GOLDEN"
+                matchedStatus = item.child("status").getValue(String::class.java)?.trim()?.lowercase() ?: ""
+                val isUsedBool = item.child("isUsed").getValue(Boolean::class.java) ?: false
+                if (matchedStatus.isEmpty() && isUsedBool) {
+                    matchedStatus = "used"
+                }
+                break
+            }
+        }
+
+        // If not found, show Invalid Code
+        if (matchedChild == null) {
+            onDone(false, "Invalid Code")
+            return
+        }
+
+        // If already used, show Already Used
+        if (matchedStatus == "used") {
+            onDone(false, "Already Used")
+            return
+        }
+
+        // If found and status unused, show Valid and update status to used
+        if (matchedStatus == "unused" || matchedStatus.isEmpty()) {
+            val calendar = Calendar.getInstance()
+            calendar.add(Calendar.DAY_OF_YEAR, 30)
+            val newExpireDate = calendar.time
+
+            val updates = mapOf<String, Any>(
+                "status" to "used",
+                "isUsed" to true,
+                "usedByDevice" to deviceId,
+                "activatedAt" to ServerValue.TIMESTAMP,
+                "expiresAt" to newExpireDate.time,
+                "plan" to matchedPlan
+            )
+
+            matchedChild.ref.updateChildren(updates).addOnSuccessListener {
+                try {
+                    val pref = context.getSharedPreferences("app_activation", Context.MODE_PRIVATE)
+                    pref.edit()
+                        .putBoolean("isActivated", true)
+                        .putString("plan", matchedPlan.lowercase())
+                        .putString("active_code", matchedCode)
+                        .putLong("expireTime", newExpireDate.time)
+                        .apply()
+                    onDone(true, "Valid")
+                } catch (e: Exception) {
+                    onDone(true, "Valid")
+                }
+            }.addOnFailureListener { err ->
+                onDone(false, "Update failed: ${err.localizedMessage ?: "Database error"}")
+            }
+        } else {
+            onDone(false, "Already Used")
         }
     }
 

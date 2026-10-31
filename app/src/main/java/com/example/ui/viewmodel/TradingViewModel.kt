@@ -555,6 +555,14 @@ class TradingViewModel(application: Application) : AndroidViewModel(application)
                     userNotification = message
                 )
             } else {
+                if (message == "Already Used" || message == "Invalid Code") {
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        userNotification = message
+                    )
+                    return@autoActivate
+                }
+
                 // If code not in RTDB, fallback to Firestore or local cryptographic code
                 if (user != null) {
                     val nonNullUser = user
