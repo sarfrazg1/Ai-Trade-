@@ -3,8 +3,10 @@ package com.example.ui.screens
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,49 +20,55 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Autorenew
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.MonetizationOn
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Shield
-import androidx.compose.material.icons.filled.VpnKey
+import androidx.compose.material.icons.filled.SyncAlt
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.ActivationHelper
 import com.example.data.repository.SubscriptionManager
-import com.example.domain.model.CommissionStatus
-import com.example.domain.model.InfluencerCommissionRecord
-import com.example.domain.model.SubscriptionPlan
 import com.example.ui.theme.AccentCyan
 import com.example.ui.theme.BearRed
 import com.example.ui.theme.BullGreen
@@ -72,9 +80,18 @@ import com.example.ui.theme.TextMuted
 import com.example.ui.theme.TextPrimary
 import com.example.ui.theme.TextSecondary
 import com.example.ui.theme.WarningAmber
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
+import com.google.firebase.database.DataSnapshot
+import com.google.firebase.database.DatabaseError
+import com.google.firebase.database.ValueEventListener
+
+data class AdminCodeItem(
+    val key: String,
+    val code: String,
+    val plan: String,
+    val status: String,
+    val isUsed: Boolean = false,
+    val usedByDevice: String = ""
+)
 
 @Composable
 fun AdminScreen(
@@ -86,101 +103,15 @@ fun AdminScreen(
     onPublishCodeCloud: (code: String, targetUserRef: String, plan: String, validityDays: Int, paymentRef: String) -> Unit = { _, _, _, _, _ -> },
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
     var isAuthenticated by remember { mutableStateOf(false) }
-    var pinInput by remember { mutableStateOf("") }
-    var pinError by remember { mutableStateOf<String?>(null) }
-    val correctPin = "74976" // Default secure PIN
+    var passwordInput by remember { mutableStateOf("") }
+    var passwordError by remember { mutableStateOf<String?>(null) }
+    var showPasswordDialog by remember { mutableStateOf(false) }
 
-    // Gate 1: Check verified administrator identity
-    if (!isUserAdmin) {
-        Box(
-            modifier = modifier
-                .fillMaxSize()
-                .background(CryptoBackground),
-            contentAlignment = Alignment.Center
-        ) {
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(24.dp),
-                colors = CardDefaults.cardColors(containerColor = CryptoSurface),
-                shape = RoundedCornerShape(16.dp),
-                border = androidx.compose.foundation.BorderStroke(1.dp, BearRed.copy(alpha = 0.5f))
-            ) {
-                Column(
-                    modifier = Modifier.padding(20.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Shield,
-                        contentDescription = "Access Restricted",
-                        tint = BearRed,
-                        modifier = Modifier.size(48.dp)
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Text(
-                        text = "Access Restricted",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = TextPrimary
-                    )
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Text(
-                        text = "This Administrative Console is restricted exclusively to the verified application owner account:\nsarfarazmech00@gmail.com",
-                        fontSize = 12.sp,
-                        color = TextSecondary,
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                    )
-                    Spacer(modifier = Modifier.height(14.dp))
+    val correctPassword = "Sarfrazg1."
 
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(CryptoSurfaceVariant, RoundedCornerShape(8.dp))
-                            .padding(10.dp)
-                    ) {
-                        Text(
-                            text = if (!adminEmail.isNullOrBlank()) {
-                                "Currently signed in as:\n$adminEmail (Not Administrator)"
-                            } else {
-                                "Currently: Not signed in"
-                            },
-                            fontSize = 11.sp,
-                            color = WarningAmber,
-                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Button(
-                            onClick = onClose,
-                            colors = ButtonDefaults.buttonColors(containerColor = CryptoSurfaceVariant),
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Text("Back to App", color = TextPrimary)
-                        }
-
-                        Button(
-                            onClick = onSignInAdmin,
-                            colors = ButtonDefaults.buttonColors(containerColor = BullGreen),
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Text("Sign In Admin", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 11.sp)
-                        }
-                    }
-                }
-            }
-        }
-        return
-    }
-
-    // Gate 2: Secondary PIN verification for authorized administrator
+    // 1. Password Verification Screen (No Google Sign-In)
     if (!isAuthenticated) {
         Box(
             modifier = modifier
@@ -197,34 +128,52 @@ fun AdminScreen(
                 border = androidx.compose.foundation.BorderStroke(1.dp, CryptoCardBorder)
             ) {
                 Column(
-                    modifier = Modifier.padding(20.dp),
+                    modifier = Modifier.padding(22.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Lock,
-                        contentDescription = "Admin Lock",
-                        tint = BullGreen,
-                        modifier = Modifier.size(44.dp)
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Box(
+                        modifier = Modifier
+                            .size(54.dp)
+                            .clip(CircleShape)
+                            .background(BullGreen.copy(alpha = 0.15f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Lock,
+                            contentDescription = "Admin Lock",
+                            tint = BullGreen,
+                            modifier = Modifier.size(30.dp)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(14.dp))
+
                     Text(
-                        text = "Admin Portal Access",
-                        fontSize = 17.sp,
+                        text = "Admin Portal",
+                        fontSize = 19.sp,
                         fontWeight = FontWeight.Bold,
                         color = TextPrimary
                     )
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
                     Text(
-                        text = "Verified Admin: $adminEmail\nEnter secondary PIN to unlock management tools.",
-                        fontSize = 11.sp,
-                        color = TextMuted,
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        text = "Realtime Database Activation Code Console",
+                        fontSize = 12.sp,
+                        color = TextSecondary,
+                        textAlign = TextAlign.Center
                     )
-                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Spacer(modifier = Modifier.height(18.dp))
 
                     OutlinedTextField(
-                        value = pinInput,
-                        onValueChange = { pinInput = it },
-                        label = { Text("Enter Admin PIN", fontSize = 12.sp) },
+                        value = passwordInput,
+                        onValueChange = {
+                            passwordInput = it
+                            if (passwordError != null) passwordError = null
+                        },
+                        label = { Text("Admin Password", fontSize = 12.sp) },
+                        placeholder = { Text("Enter password", fontSize = 12.sp) },
                         visualTransformation = PasswordVisualTransformation(),
                         singleLine = true,
                         colors = OutlinedTextFieldDefaults.colors(
@@ -235,52 +184,206 @@ fun AdminScreen(
                         ),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .testTag("admin_pin_input")
+                            .testTag("admin_password_input")
                     )
 
-                    pinError?.let {
-                        Spacer(modifier = Modifier.height(6.dp))
-                        Text(text = it, fontSize = 11.sp, color = BearRed)
+                    passwordError?.let {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = it,
+                            fontSize = 12.sp,
+                            color = BearRed,
+                            fontWeight = FontWeight.SemiBold
+                        )
                     }
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(18.dp))
 
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        TextButton(onClick = onClose) {
-                            Text("Back to App", color = TextMuted)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        OutlinedButton(
+                            onClick = onClose,
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Text("Back to App", color = TextSecondary, fontSize = 12.sp)
                         }
+
                         Button(
                             onClick = {
-                                if (pinInput == correctPin) {
+                                if (passwordInput == correctPassword) {
                                     isAuthenticated = true
-                                    pinError = null
+                                    passwordError = null
                                 } else {
-                                    pinError = "Incorrect PIN."
+                                    passwordError = "Wrong Password"
                                 }
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = BullGreen),
-                            modifier = Modifier.testTag("admin_login_button")
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier
+                                .weight(1f)
+                                .testTag("sign_in_admin_button")
                         ) {
-                            Text("Unlock", color = Color.Black, fontWeight = FontWeight.Bold)
+                            Text("Sign In Admin", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                         }
                     }
                 }
             }
         }
+
+        // Secondary Dialog flow if user triggered dialog specifically
+        if (showPasswordDialog) {
+            AlertDialog(
+                onDismissRequest = { showPasswordDialog = false },
+                containerColor = CryptoSurface,
+                title = { Text("Sign In Admin", color = TextPrimary, fontWeight = FontWeight.Bold) },
+                text = {
+                    Column {
+                        Text("Enter administrator password to continue:", color = TextSecondary, fontSize = 12.sp)
+                        Spacer(modifier = Modifier.height(10.dp))
+                        OutlinedTextField(
+                            value = passwordInput,
+                            onValueChange = {
+                                passwordInput = it
+                                if (passwordError != null) passwordError = null
+                            },
+                            label = { Text("Password", fontSize = 12.sp) },
+                            visualTransformation = PasswordVisualTransformation(),
+                            singleLine = true,
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = BullGreen,
+                                unfocusedBorderColor = CryptoCardBorder,
+                                focusedTextColor = TextPrimary,
+                                unfocusedTextColor = TextPrimary
+                            ),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        passwordError?.let {
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text(text = it, fontSize = 11.sp, color = BearRed, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            if (passwordInput == correctPassword) {
+                                isAuthenticated = true
+                                passwordError = null
+                                showPasswordDialog = false
+                            } else {
+                                passwordError = "Wrong Password"
+                            }
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = BullGreen)
+                    ) {
+                        Text("Login", color = Color.Black, fontWeight = FontWeight.Bold)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showPasswordDialog = false }) {
+                        Text("Cancel", color = TextMuted)
+                    }
+                }
+            )
+        }
         return
     }
 
-    // Authenticated View
-    val commissions by subscriptionManager.commissions.collectAsState()
-    val auditLogs by subscriptionManager.auditLogs.collectAsState()
-    var selectedTab by remember { mutableStateOf(0) }
+    // 2. Authenticated Admin Console (Realtime Database Connected)
+    var codesList by remember { mutableStateOf<List<AdminCodeItem>>(emptyList()) }
+    var isLoading by remember { mutableStateOf(true) }
+    var rtdbError by remember { mutableStateOf<String?>(null) }
+    var searchQuery by remember { mutableStateOf("") }
+    var isSearchVisible by remember { mutableStateOf(false) }
+
+    // Dialog state controllers
+    var showAddCodeDialog by remember { mutableStateOf(false) }
+    var showDeleteCodeDialog by remember { mutableStateOf(false) }
+    var codeToDelete by remember { mutableStateOf<AdminCodeItem?>(null) }
+    var showStatusChangeDialog by remember { mutableStateOf(false) }
+    var codeToResetStatus by remember { mutableStateOf<AdminCodeItem?>(null) }
+    var feedbackMessage by remember { mutableStateOf<String?>(null) }
+
+    // Realtime Database connection to: activation_codes -> activationCodes
+    DisposableEffect(Unit) {
+        val database = ActivationHelper.getDatabase(context)
+        if (database == null) {
+            isLoading = false
+            rtdbError = "Could not initialize Firebase Realtime Database"
+            return@DisposableEffect onDispose {}
+        }
+
+        val rootRef = database.getReference("activation_codes")
+        val listener = object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                isLoading = false
+                rtdbError = null
+                val items = mutableListOf<AdminCodeItem>()
+
+                val targetList = if (snapshot.hasChild("activationCodes")) {
+                    snapshot.child("activationCodes")
+                } else {
+                    snapshot
+                }
+
+                for (child in targetList.children) {
+                    val code = child.child("code").getValue(String::class.java)?.trim() ?: ""
+                    val plan = child.child("plan").getValue(String::class.java)?.trim() ?: "GOLDEN"
+                    val status = child.child("status").getValue(String::class.java)?.trim() ?: "unused"
+                    val isUsed = child.child("isUsed").getValue(Boolean::class.java) ?: status.equals("used", ignoreCase = true)
+                    val device = child.child("usedByDevice").getValue(String::class.java)?.trim() ?: ""
+
+                    if (code.isNotEmpty() || child.childrenCount > 0) {
+                        items.add(
+                            AdminCodeItem(
+                                key = child.key ?: "",
+                                code = code,
+                                plan = plan,
+                                status = status,
+                                isUsed = isUsed,
+                                usedByDevice = device
+                            )
+                        )
+                    }
+                }
+                codesList = items
+            }
+
+            override fun onCancelled(error: DatabaseError) {
+                isLoading = false
+                rtdbError = "Firebase Error: ${error.message}"
+            }
+        }
+
+        rootRef.addValueEventListener(listener)
+        onDispose {
+            rootRef.removeEventListener(listener)
+        }
+    }
+
+    // Filter codes based on search query
+    val filteredCodes = remember(codesList, searchQuery) {
+        if (searchQuery.isBlank()) {
+            codesList
+        } else {
+            val q = searchQuery.trim()
+            codesList.filter {
+                it.code.contains(q, ignoreCase = true) ||
+                it.plan.contains(q, ignoreCase = true) ||
+                it.status.contains(q, ignoreCase = true)
+            }
+        }
+    }
 
     Column(
         modifier = modifier
             .fillMaxSize()
             .background(CryptoBackground)
     ) {
-        // Top Header
+        // Top Navigation Bar
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -294,124 +397,454 @@ fun AdminScreen(
                     Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = TextPrimary)
                 }
                 Spacer(modifier = Modifier.width(6.dp))
-                Text(
-                    text = "Admin Management Console",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = TextPrimary
-                )
-            }
-            IconButton(onClick = { subscriptionManager.refreshCommissionEligibility() }) {
-                Icon(imageVector = Icons.Default.Refresh, contentDescription = "Refresh", tint = AccentCyan)
-            }
-        }
-
-        TabRow(
-            selectedTabIndex = selectedTab,
-            containerColor = CryptoSurface,
-            contentColor = BullGreen
-        ) {
-            Tab(
-                selected = selectedTab == 0,
-                onClick = { selectedTab = 0 },
-                text = { Text("Issue Code", fontSize = 11.sp, fontWeight = FontWeight.Bold) }
-            )
-            Tab(
-                selected = selectedTab == 1,
-                onClick = { selectedTab = 1 },
-                text = { Text("Influencer Ledger", fontSize = 11.sp, fontWeight = FontWeight.Bold) }
-            )
-            Tab(
-                selected = selectedTab == 2,
-                onClick = { selectedTab = 2 },
-                text = { Text("Issued Codes", fontSize = 11.sp, fontWeight = FontWeight.Bold) }
-            )
-            Tab(
-                selected = selectedTab == 3,
-                onClick = { selectedTab = 3 },
-                text = { Text("Audit Log", fontSize = 11.sp, fontWeight = FontWeight.Bold) }
-            )
-        }
-
-        when (selectedTab) {
-            0 -> IssueCodeTab(subscriptionManager = subscriptionManager, onPublishCodeCloud = onPublishCodeCloud)
-            1 -> InfluencerLedgerTab(commissions = commissions, subscriptionManager = subscriptionManager)
-            2 -> IssuedCodesTab(subscriptionManager = subscriptionManager)
-            3 -> AuditLogTab(auditLogs = auditLogs)
-        }
-    }
-}
-
-@Composable
-private fun IssueCodeTab(
-    subscriptionManager: SubscriptionManager,
-    onPublishCodeCloud: (code: String, targetUserRef: String, plan: String, validityDays: Int, paymentRef: String) -> Unit = { _, _, _, _, _ -> }
-) {
-    val context = LocalContext.current
-    var userRefInput by remember { mutableStateOf("") }
-    var selectedPlan by remember { mutableStateOf(SubscriptionPlan.GOLDEN) }
-    var paymentRefInput by remember { mutableStateOf("") }
-    var validityDaysInput by remember { mutableStateOf("30") }
-    var generatedCode by remember { mutableStateOf<String?>(null) }
-    var feedbackMessage by remember { mutableStateOf<String?>(null) }
-
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
-    ) {
-        item {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = CryptoSurface),
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Column(modifier = Modifier.padding(14.dp)) {
+                Column {
                     Text(
-                        text = "Verify Payment & Issue Activation Key",
-                        fontSize = 15.sp,
+                        text = "Admin Console",
+                        fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
                         color = TextPrimary
                     )
-                    Spacer(modifier = Modifier.height(10.dp))
+                    Text(
+                        text = "activation_codes -> activationCodes",
+                        fontSize = 10.sp,
+                        color = AccentCyan
+                    )
+                }
+            }
 
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                IconButton(
+                    onClick = {
+                        val database = ActivationHelper.getDatabase(context)
+                        database?.getReference("activation_codes")?.get()
+                        feedbackMessage = "Refreshed from Firebase"
+                    }
+                ) {
+                    Icon(imageVector = Icons.Default.Refresh, contentDescription = "Refresh", tint = AccentCyan)
+                }
+            }
+        }
+
+        // Stats summary bar
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(CryptoSurfaceVariant)
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            val totalCount = codesList.size
+            val usedCount = codesList.count { it.status.equals("used", ignoreCase = true) || it.isUsed }
+            val unusedCount = totalCount - usedCount
+
+            Text(
+                text = "Total Codes: $totalCount",
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
+                color = TextPrimary
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text(text = "Unused: $unusedCount", fontSize = 11.sp, color = BullGreen, fontWeight = FontWeight.Bold)
+                Text(text = "Used: $usedCount", fontSize = 11.sp, color = BearRed, fontWeight = FontWeight.Bold)
+            }
+        }
+
+        // 4 Action Buttons Bar: Add New Code, Delete Code, Search Code, Change Status
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+            colors = CardDefaults.cardColors(containerColor = CryptoSurface),
+            shape = RoundedCornerShape(10.dp),
+            border = androidx.compose.foundation.BorderStroke(1.dp, CryptoCardBorder)
+        ) {
+            Column(modifier = Modifier.padding(10.dp)) {
+                Text(
+                    text = "Admin Actions",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TextMuted,
+                    modifier = Modifier.padding(bottom = 6.dp)
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    // Button 1: Add New Code
+                    Button(
+                        onClick = { showAddCodeDialog = true },
+                        colors = ButtonDefaults.buttonColors(containerColor = BullGreen),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.weight(1f),
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 8.dp, horizontal = 4.dp)
+                    ) {
+                        Icon(imageVector = Icons.Default.Add, contentDescription = "Add", tint = Color.Black, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(3.dp))
+                        Text("Add Code", fontSize = 10.sp, color = Color.Black, fontWeight = FontWeight.Bold)
+                    }
+
+                    // Button 2: Delete Code
+                    Button(
+                        onClick = { showDeleteCodeDialog = true },
+                        colors = ButtonDefaults.buttonColors(containerColor = BearRed),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.weight(1f),
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 8.dp, horizontal = 4.dp)
+                    ) {
+                        Icon(imageVector = Icons.Default.Delete, contentDescription = "Delete", tint = Color.White, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(3.dp))
+                        Text("Delete", fontSize = 10.sp, color = Color.White, fontWeight = FontWeight.Bold)
+                    }
+
+                    // Button 3: Search Code
+                    Button(
+                        onClick = { isSearchVisible = !isSearchVisible },
+                        colors = ButtonDefaults.buttonColors(containerColor = if (isSearchVisible) AccentCyan else CryptoSurfaceVariant),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.weight(1f),
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 8.dp, horizontal = 4.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Search,
+                            contentDescription = "Search",
+                            tint = if (isSearchVisible) Color.Black else TextPrimary,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(3.dp))
+                        Text(
+                            "Search",
+                            fontSize = 10.sp,
+                            color = if (isSearchVisible) Color.Black else TextPrimary,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+
+                    // Button 4: Change Status from used to unused
+                    Button(
+                        onClick = { showStatusChangeDialog = true },
+                        colors = ButtonDefaults.buttonColors(containerColor = WarningAmber),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.weight(1f),
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 8.dp, horizontal = 4.dp)
+                    ) {
+                        Icon(imageVector = Icons.Default.Autorenew, contentDescription = "Reset", tint = Color.Black, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(3.dp))
+                        Text("Reset", fontSize = 10.sp, color = Color.Black, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+        }
+
+        // Optional Search Bar
+        if (isSearchVisible) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 4.dp),
+                colors = CardDefaults.cardColors(containerColor = CryptoSurface),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     OutlinedTextField(
-                        value = userRefInput,
-                        onValueChange = { userRefInput = it },
-                        label = { Text("Target User Reference ID", fontSize = 11.sp) },
-                        placeholder = { Text("e.g. STAI-USER-892415", fontSize = 11.sp) },
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        placeholder = { Text("Search code, plan or status...", fontSize = 11.sp) },
                         singleLine = true,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .testTag("admin_user_ref_input"),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = AccentCyan,
+                            unfocusedBorderColor = CryptoCardBorder,
+                            focusedTextColor = TextPrimary,
+                            unfocusedTextColor = TextPrimary
+                        ),
+                        modifier = Modifier.weight(1f)
+                    )
+                    if (searchQuery.isNotEmpty()) {
+                        IconButton(onClick = { searchQuery = "" }) {
+                            Icon(imageVector = Icons.Default.Clear, contentDescription = "Clear", tint = TextMuted)
+                        }
+                    }
+                }
+            }
+        }
+
+        // Feedback banner
+        feedbackMessage?.let { msg ->
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 4.dp),
+                colors = CardDefaults.cardColors(containerColor = BullGreen.copy(alpha = 0.2f)),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(text = msg, fontSize = 12.sp, color = BullGreen, fontWeight = FontWeight.Medium)
+                    IconButton(onClick = { feedbackMessage = null }, modifier = Modifier.size(20.dp)) {
+                        Icon(imageVector = Icons.Default.Close, contentDescription = "Dismiss", tint = BullGreen, modifier = Modifier.size(16.dp))
+                    }
+                }
+            }
+        }
+
+        // Error Banner
+        rtdbError?.let { err ->
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 4.dp),
+                colors = CardDefaults.cardColors(containerColor = BearRed.copy(alpha = 0.2f)),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Text(
+                    text = err,
+                    fontSize = 12.sp,
+                    color = BearRed,
+                    modifier = Modifier.padding(12.dp)
+                )
+            }
+        }
+
+        // Activation Codes List
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .weight(1f)
+        ) {
+            if (isLoading) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = BullGreen, modifier = Modifier.size(36.dp))
+                }
+            } else if (filteredCodes.isEmpty()) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = if (searchQuery.isNotEmpty()) "No activation codes match '$searchQuery'" else "No activation codes found in Realtime Database.",
+                            color = TextSecondary,
+                            fontSize = 13.sp,
+                            textAlign = TextAlign.Center
+                        )
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Button(
+                            onClick = { showAddCodeDialog = true },
+                            colors = ButtonDefaults.buttonColors(containerColor = BullGreen)
+                        ) {
+                            Text("Add First Code", color = Color.Black, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(filteredCodes, key = { it.key + it.code }) { item ->
+                        val isUsed = item.status.equals("used", ignoreCase = true) || item.isUsed
+
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.cardColors(containerColor = CryptoSurface),
+                            shape = RoundedCornerShape(10.dp),
+                            border = androidx.compose.foundation.BorderStroke(
+                                1.dp,
+                                if (isUsed) CryptoCardBorder else BullGreen.copy(alpha = 0.4f)
+                            )
+                        ) {
+                            Column(modifier = Modifier.padding(12.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    // Code Text & Copy
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text(
+                                            text = item.code.ifBlank { "[Empty Code Key ${item.key}]" },
+                                            fontSize = 14.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            fontFamily = FontFamily.Monospace,
+                                            color = if (isUsed) TextSecondary else TextPrimary
+                                        )
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        IconButton(
+                                            onClick = {
+                                                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                                val clip = ClipData.newPlainText("Activation Code", item.code)
+                                                clipboard.setPrimaryClip(clip)
+                                                Toast.makeText(context, "Code copied: ${item.code}", Toast.LENGTH_SHORT).show()
+                                            },
+                                            modifier = Modifier.size(24.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.ContentCopy,
+                                                contentDescription = "Copy code",
+                                                tint = TextMuted,
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                        }
+                                    }
+
+                                    // Status Badge (unused / used)
+                                    Box(
+                                        modifier = Modifier
+                                            .background(
+                                                if (isUsed) BearRed.copy(alpha = 0.2f) else BullGreen.copy(alpha = 0.2f),
+                                                RoundedCornerShape(6.dp)
+                                            )
+                                            .padding(horizontal = 8.dp, vertical = 3.dp)
+                                    ) {
+                                        Text(
+                                            text = if (isUsed) "USED" else "UNUSED",
+                                            fontSize = 10.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = if (isUsed) BearRed else BullGreen
+                                        )
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.height(6.dp))
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    // Plan label
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text(text = "Plan: ", fontSize = 11.sp, color = TextMuted)
+                                        Text(
+                                            text = item.plan.uppercase(),
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = when (item.plan.uppercase()) {
+                                                "GOLDEN", "GOLD" -> WarningAmber
+                                                "SILVER" -> AccentCyan
+                                                else -> BullGreen
+                                            }
+                                        )
+                                        Text(text = " (Key: ${item.key})", fontSize = 10.sp, color = TextMuted)
+                                    }
+
+                                    // Action buttons for this specific code
+                                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                        if (isUsed) {
+                                            TextButton(
+                                                onClick = {
+                                                    codeToResetStatus = item
+                                                    showStatusChangeDialog = true
+                                                },
+                                                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                                                modifier = Modifier.height(28.dp)
+                                            ) {
+                                                Text("Make Unused", fontSize = 10.sp, color = WarningAmber, fontWeight = FontWeight.Bold)
+                                            }
+                                        }
+
+                                        IconButton(
+                                            onClick = {
+                                                codeToDelete = item
+                                                showDeleteCodeDialog = true
+                                            },
+                                            modifier = Modifier.size(28.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Delete,
+                                                contentDescription = "Delete code",
+                                                tint = BearRed.copy(alpha = 0.8f),
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                        }
+                                    }
+                                }
+
+                                if (isUsed && item.usedByDevice.isNotEmpty()) {
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(
+                                        text = "Device: ${item.usedByDevice}",
+                                        fontSize = 10.sp,
+                                        color = TextMuted,
+                                        fontFamily = FontFamily.Monospace
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // -------------------------------------------------------------
+    // DIALOG 1: Add New Code
+    // -------------------------------------------------------------
+    if (showAddCodeDialog) {
+        var newCodeInput by remember {
+            val randomPart = (1..3).map {
+                (1..4).map { "ABCDEFGHJKLMNPQRSTUVWXYZ23456789".random() }.joinToString("")
+            }.joinToString("-")
+            mutableStateOf("STAI-$randomPart")
+        }
+        var newPlanInput by remember { mutableStateOf("GOLDEN") }
+        var newStatusInput by remember { mutableStateOf("unused") }
+        var isSaving by remember { mutableStateOf(false) }
+
+        AlertDialog(
+            onDismissRequest = { if (!isSaving) showAddCodeDialog = false },
+            containerColor = CryptoSurface,
+            title = { Text("Add New Activation Code", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 16.sp) },
+            text = {
+                Column {
+                    Text("Enter code or keep auto-generated:", fontSize = 11.sp, color = TextSecondary)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = newCodeInput,
+                        onValueChange = { newCodeInput = it.uppercase().trim() },
+                        label = { Text("Code", fontSize = 11.sp) },
+                        singleLine = true,
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = BullGreen,
                             unfocusedBorderColor = CryptoCardBorder,
                             focusedTextColor = TextPrimary,
                             unfocusedTextColor = TextPrimary
-                        )
+                        ),
+                        modifier = Modifier.fillMaxWidth()
                     )
 
                     Spacer(modifier = Modifier.height(10.dp))
 
-                    Text("Select Plan:", fontSize = 12.sp, color = TextMuted)
+                    Text("Plan:", fontSize = 11.sp, color = TextMuted)
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        listOf(SubscriptionPlan.GOLDEN, SubscriptionPlan.SILVER, SubscriptionPlan.BRONZE).forEach { plan ->
+                        listOf("GOLDEN", "SILVER", "BRONZE").forEach { plan ->
+                            val selected = newPlanInput == plan
                             Button(
-                                onClick = { selectedPlan = plan },
+                                onClick = { newPlanInput = plan },
                                 colors = ButtonDefaults.buttonColors(
-                                    containerColor = if (selectedPlan == plan) BullGreen else CryptoSurfaceVariant
+                                    containerColor = if (selected) BullGreen else CryptoSurfaceVariant
                                 ),
-                                shape = RoundedCornerShape(8.dp),
-                                modifier = Modifier.weight(1f)
+                                shape = RoundedCornerShape(6.dp),
+                                modifier = Modifier.weight(1f),
+                                contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 4.dp)
                             ) {
                                 Text(
-                                    text = "${plan.id} (${plan.pricePkr})",
+                                    text = plan,
                                     fontSize = 10.sp,
-                                    color = if (selectedPlan == plan) Color.Black else TextPrimary,
+                                    color = if (selected) Color.Black else TextPrimary,
                                     fontWeight = FontWeight.Bold
                                 )
                             }
@@ -420,555 +853,240 @@ private fun IssueCodeTab(
 
                     Spacer(modifier = Modifier.height(10.dp))
 
-                    OutlinedTextField(
-                        value = paymentRefInput,
-                        onValueChange = { paymentRefInput = it },
-                        label = { Text("Payment Verification TID / Reference", fontSize = 11.sp) },
-                        placeholder = { Text("e.g. JazzCash / EasyPaisa TID 9841829", fontSize = 11.sp) },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = BullGreen,
-                            unfocusedBorderColor = CryptoCardBorder,
-                            focusedTextColor = TextPrimary,
-                            unfocusedTextColor = TextPrimary
-                        )
-                    )
-
-                    Spacer(modifier = Modifier.height(10.dp))
-
-                    OutlinedTextField(
-                        value = validityDaysInput,
-                        onValueChange = { validityDaysInput = it },
-                        label = { Text("Validity Days", fontSize = 11.sp) },
-                        placeholder = { Text("30", fontSize = 11.sp) },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = BullGreen,
-                            unfocusedBorderColor = CryptoCardBorder,
-                            focusedTextColor = TextPrimary,
-                            unfocusedTextColor = TextPrimary
-                        )
-                    )
-
-                    Spacer(modifier = Modifier.height(14.dp))
-
-                    Button(
-                        onClick = {
-                            if (userRefInput.isBlank()) {
-                                feedbackMessage = "Please enter the target User Reference ID."
-                                return@Button
-                            }
-                            val days = validityDaysInput.toIntOrNull() ?: 30
-                            val paymentRef = paymentRefInput.ifBlank { "MANUAL_VERIFIED" }
-                            val code = subscriptionManager.generateActivationCode(
-                                targetUserRef = userRefInput,
-                                plan = selectedPlan,
-                                validityDays = days,
-                                paymentRef = paymentRef
-                            )
-                            generatedCode = code
-                            onPublishCodeCloud(code, userRefInput, selectedPlan.id, days, paymentRef)
-                            feedbackMessage = "Code successfully generated & saved to Cloud Vault & Local Ledger!"
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = BullGreen),
-                        shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(48.dp)
-                            .testTag("admin_generate_code_button")
-                    ) {
-                        Text("Approve Payment & Generate Key", color = Color.Black, fontWeight = FontWeight.Bold)
-                    }
-
-                    feedbackMessage?.let {
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(text = it, fontSize = 12.sp, color = BullGreen)
-                    }
-
-                    generatedCode?.let { code ->
-                        Spacer(modifier = Modifier.height(14.dp))
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = CardDefaults.cardColors(containerColor = CryptoSurfaceVariant),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, BullGreen)
-                        ) {
-                            Column(modifier = Modifier.padding(12.dp)) {
-                                Text("Generated Activation Key:", fontSize = 11.sp, color = TextMuted)
-                                Text(text = code, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = BullGreen)
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Button(
-                                    onClick = {
-                                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                                        val clip = ClipData.newPlainText("Activation Code", code)
-                                        clipboard.setPrimaryClip(clip)
-                                    },
-                                    colors = ButtonDefaults.buttonColors(containerColor = AccentCyan),
-                                    shape = RoundedCornerShape(6.dp)
-                                ) {
-                                    Icon(imageVector = Icons.Default.ContentCopy, contentDescription = null, tint = Color.Black, modifier = Modifier.size(14.dp))
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Text("Copy Code for WhatsApp", color = Color.Black, fontSize = 11.sp)
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun InfluencerLedgerTab(
-    commissions: List<InfluencerCommissionRecord>,
-    subscriptionManager: SubscriptionManager
-) {
-    var selectedRecordForPayout by remember { mutableStateOf<InfluencerCommissionRecord?>(null) }
-    var selectedRecordForReversal by remember { mutableStateOf<InfluencerCommissionRecord?>(null) }
-    val dateFormat = remember { SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()) }
-
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(14.dp)
-    ) {
-        item {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = CryptoSurface),
-                shape = RoundedCornerShape(10.dp)
-            ) {
-                Column(modifier = Modifier.padding(12.dp)) {
-                    Text(
-                        text = "Influencer Commission Ledger (20% & 7-Day Rule)",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = TextPrimary
-                    )
-                    Text(
-                        text = "Golden: PKR 600 • Silver: PKR 400 • Bronze: PKR 200. Enforces server-side 7 complete days waiting period before payout eligibility.",
-                        fontSize = 11.sp,
-                        color = TextMuted
-                    )
-                }
-            }
-            Spacer(modifier = Modifier.height(10.dp))
-        }
-
-        if (commissions.isEmpty()) {
-            item {
-                Text(
-                    text = "No influencer sales records found yet.",
-                    fontSize = 12.sp,
-                    color = TextMuted,
-                    modifier = Modifier.padding(16.dp)
-                )
-            }
-        }
-
-        items(commissions) { record ->
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 4.dp),
-                colors = CardDefaults.cardColors(containerColor = CryptoSurface),
-                shape = RoundedCornerShape(10.dp)
-            ) {
-                Column(modifier = Modifier.padding(12.dp)) {
+                    Text("Initial Status:", fontSize = 11.sp, color = TextMuted)
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        Text(
-                            text = "Code: ${record.influencerCode} (${record.plan.id})",
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = AccentCyan
-                        )
-                        Text(
-                            text = "PKR ${record.commissionAmountPkr}",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = BullGreen
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "User Ref: ${record.userReference} | Sale: PKR ${record.saleAmountPkr}",
-                        fontSize = 11.sp,
-                        color = TextSecondary
-                    )
-                    Text(
-                        text = "Verified: ${dateFormat.format(Date(record.verifiedAt))}",
-                        fontSize = 10.sp,
-                        color = TextMuted
-                    )
-                    Text(
-                        text = "Eligible Release: ${dateFormat.format(Date(record.eligibleAt))}",
-                        fontSize = 10.sp,
-                        color = if (record.isSevenDaysPassed) BullGreen else WarningAmber
-                    )
-
-                    Spacer(modifier = Modifier.height(6.dp))
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .background(
-                                    when (record.status) {
-                                        CommissionStatus.PAID -> BullGreen.copy(alpha = 0.2f)
-                                        CommissionStatus.ELIGIBLE -> AccentCyan.copy(alpha = 0.2f)
-                                        CommissionStatus.HELD -> WarningAmber.copy(alpha = 0.2f)
-                                        CommissionStatus.REVERSED, CommissionStatus.CANCELLED -> BearRed.copy(alpha = 0.2f)
-                                        else -> CryptoSurfaceVariant
-                                    },
-                                    RoundedCornerShape(4.dp)
+                        listOf("unused", "used").forEach { st ->
+                            val selected = newStatusInput == st
+                            Button(
+                                onClick = { newStatusInput = st },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = if (selected) (if (st == "unused") BullGreen else BearRed) else CryptoSurfaceVariant
+                                ),
+                                shape = RoundedCornerShape(6.dp),
+                                modifier = Modifier.weight(1f),
+                                contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 4.dp)
+                            ) {
+                                Text(
+                                    text = st.uppercase(),
+                                    fontSize = 10.sp,
+                                    color = if (selected) Color.Black else TextPrimary,
+                                    fontWeight = FontWeight.Bold
                                 )
-                                .padding(horizontal = 6.dp, vertical = 2.dp)
-                        ) {
-                            Text(
-                                text = "${record.status.label} ${if (record.status == CommissionStatus.HELD) "(${record.daysUntilEligible}d left)" else ""}",
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = when (record.status) {
-                                    CommissionStatus.PAID -> BullGreen
-                                    CommissionStatus.ELIGIBLE -> AccentCyan
-                                    CommissionStatus.HELD -> WarningAmber
-                                    CommissionStatus.REVERSED, CommissionStatus.CANCELLED -> BearRed
-                                    else -> TextSecondary
-                                }
-                            )
-                        }
-
-                        Row {
-                            if (record.status == CommissionStatus.ELIGIBLE || record.status == CommissionStatus.PAYOUT_REQUESTED) {
-                                TextButton(onClick = { selectedRecordForPayout = record }) {
-                                    Text("Mark Paid", fontSize = 11.sp, color = BullGreen)
-                                }
-                            }
-                            if (record.status != CommissionStatus.PAID && record.status != CommissionStatus.REVERSED) {
-                                TextButton(onClick = { selectedRecordForReversal = record }) {
-                                    Text("Reverse", fontSize = 11.sp, color = BearRed)
-                                }
                             }
                         }
                     }
-                }
-            }
-        }
-    }
-
-    // Mark Paid Dialog
-    selectedRecordForPayout?.let { record ->
-        var payoutRef by remember { mutableStateOf("") }
-        AlertDialog(
-            onDismissRequest = { selectedRecordForPayout = null },
-            containerColor = CryptoSurface,
-            title = { Text("Confirm Influencer Payout", color = TextPrimary) },
-            text = {
-                Column {
-                    Text(
-                        text = "Record manual settlement of PKR ${record.commissionAmountPkr} to influencer ${record.influencerCode}.",
-                        fontSize = 12.sp,
-                        color = TextSecondary
-                    )
-                    Spacer(modifier = Modifier.height(10.dp))
-                    OutlinedTextField(
-                        value = payoutRef,
-                        onValueChange = { payoutRef = it },
-                        label = { Text("Transfer Reference / TID", fontSize = 11.sp) },
-                        placeholder = { Text("e.g. JazzCash 8419401", fontSize = 11.sp) },
-                        singleLine = true,
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = BullGreen,
-                            unfocusedBorderColor = CryptoCardBorder,
-                            focusedTextColor = TextPrimary,
-                            unfocusedTextColor = TextPrimary
-                        )
-                    )
                 }
             },
             confirmButton = {
                 Button(
                     onClick = {
-                        subscriptionManager.markPayoutPaid(record.id, payoutRef)
-                        selectedRecordForPayout = null
+                        val clean = newCodeInput.trim()
+                        if (clean.isBlank()) return@Button
+                        isSaving = true
+
+                        val database = ActivationHelper.getDatabase(context)
+                        val ref = database?.getReference("activation_codes")?.child("activationCodes")
+
+                        // Next index calculation
+                        val nextIndex = (codesList.mapNotNull { it.key.toIntOrNull() }.maxOrNull() ?: -1) + 1
+                        val newKey = nextIndex.toString()
+
+                        val data = mapOf<String, Any>(
+                            "code" to clean,
+                            "plan" to newPlanInput.uppercase(),
+                            "status" to newStatusInput.lowercase(),
+                            "isUsed" to (newStatusInput.lowercase() == "used")
+                        )
+
+                        ref?.child(newKey)?.setValue(data)?.addOnSuccessListener {
+                            isSaving = false
+                            showAddCodeDialog = false
+                            feedbackMessage = "Code $clean added to Realtime Database!"
+                        }?.addOnFailureListener {
+                            isSaving = false
+                            feedbackMessage = "Failed to add code: ${it.localizedMessage}"
+                        }
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = BullGreen)
+                    colors = ButtonDefaults.buttonColors(containerColor = BullGreen),
+                    enabled = !isSaving
                 ) {
-                    Text("Confirm Paid", color = Color.Black)
+                    if (isSaving) {
+                        CircularProgressIndicator(color = Color.Black, modifier = Modifier.size(16.dp))
+                    } else {
+                        Text("Add to Firebase", color = Color.Black, fontWeight = FontWeight.Bold)
+                    }
                 }
             },
             dismissButton = {
-                TextButton(onClick = { selectedRecordForPayout = null }) { Text("Cancel", color = TextMuted) }
+                TextButton(onClick = { showAddCodeDialog = false }, enabled = !isSaving) {
+                    Text("Cancel", color = TextMuted)
+                }
             }
         )
     }
 
-    // Reverse Dialog
-    selectedRecordForReversal?.let { record ->
-        var reason by remember { mutableStateOf("") }
+    // -------------------------------------------------------------
+    // DIALOG 2: Delete Code
+    // -------------------------------------------------------------
+    if (showDeleteCodeDialog) {
+        var inputCodeToDelete by remember { mutableStateOf(codeToDelete?.code ?: "") }
+        var isDeleting by remember { mutableStateOf(false) }
+
         AlertDialog(
-            onDismissRequest = { selectedRecordForReversal = null },
+            onDismissRequest = { if (!isDeleting) showDeleteCodeDialog = false },
             containerColor = CryptoSurface,
-            title = { Text("Reverse Commission Record", color = TextPrimary) },
+            title = { Text("Delete Activation Code", color = BearRed, fontWeight = FontWeight.Bold, fontSize = 16.sp) },
             text = {
                 Column {
-                    Text(
-                        text = "Reverse commission for record ${record.id} (Influencer: ${record.influencerCode}). Original record will be preserved for audit.",
-                        fontSize = 12.sp,
-                        color = TextSecondary
-                    )
+                    Text("Select or enter the code you want to permanently delete from Firebase:", fontSize = 12.sp, color = TextSecondary)
                     Spacer(modifier = Modifier.height(10.dp))
                     OutlinedTextField(
-                        value = reason,
-                        onValueChange = { reason = it },
-                        label = { Text("Reversal Reason", fontSize = 11.sp) },
-                        placeholder = { Text("e.g. User chargeback or dispute", fontSize = 11.sp) },
+                        value = inputCodeToDelete,
+                        onValueChange = { inputCodeToDelete = it.trim() },
+                        label = { Text("Code to Delete", fontSize = 11.sp) },
+                        placeholder = { Text("e.g. STAI-X436-7S7Q-LY4A", fontSize = 11.sp) },
                         singleLine = true,
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = BearRed,
                             unfocusedBorderColor = CryptoCardBorder,
                             focusedTextColor = TextPrimary,
                             unfocusedTextColor = TextPrimary
-                        )
+                        ),
+                        modifier = Modifier.fillMaxWidth()
                     )
                 }
             },
             confirmButton = {
                 Button(
                     onClick = {
-                        subscriptionManager.reverseOrCancelCommission(record.id, reason)
-                        selectedRecordForReversal = null
+                        val target = inputCodeToDelete.trim()
+                        if (target.isBlank()) return@Button
+
+                        val matched = codesList.firstOrNull { it.code.equals(target, ignoreCase = true) || it.key == target }
+                        if (matched == null) {
+                            feedbackMessage = "Code '$target' not found in database"
+                            showDeleteCodeDialog = false
+                            return@Button
+                        }
+
+                        isDeleting = true
+                        val database = ActivationHelper.getDatabase(context)
+                        val ref = database?.getReference("activation_codes")?.child("activationCodes")
+
+                        ref?.child(matched.key)?.removeValue()?.addOnSuccessListener {
+                            isDeleting = false
+                            showDeleteCodeDialog = false
+                            codeToDelete = null
+                            feedbackMessage = "Code ${matched.code} deleted from Realtime Database"
+                        }?.addOnFailureListener {
+                            isDeleting = false
+                            feedbackMessage = "Failed to delete: ${it.localizedMessage}"
+                        }
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = BearRed)
+                    colors = ButtonDefaults.buttonColors(containerColor = BearRed),
+                    enabled = !isDeleting
                 ) {
-                    Text("Confirm Reversal", color = Color.White)
+                    if (isDeleting) {
+                        CircularProgressIndicator(color = Color.White, modifier = Modifier.size(16.dp))
+                    } else {
+                        Text("Delete", color = Color.White, fontWeight = FontWeight.Bold)
+                    }
                 }
             },
             dismissButton = {
-                TextButton(onClick = { selectedRecordForReversal = null }) { Text("Cancel", color = TextMuted) }
+                TextButton(onClick = { showDeleteCodeDialog = false }, enabled = !isDeleting) {
+                    Text("Cancel", color = TextMuted)
+                }
             }
         )
     }
-}
 
-@Composable
-private fun IssuedCodesTab(subscriptionManager: SubscriptionManager) {
-    val context = androidx.compose.ui.platform.LocalContext.current
-    val codes = remember { subscriptionManager.getIssuedCodes() }
-    val rtdbCodes = remember { subscriptionManager.getPresetRtdbCodes() }
-    val dateFormat = remember { SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()) }
-    var filterText by remember { mutableStateOf("") }
+    // -------------------------------------------------------------
+    // DIALOG 3: Change Status from used to unused
+    // -------------------------------------------------------------
+    if (showStatusChangeDialog) {
+        var inputCodeToReset by remember { mutableStateOf(codeToResetStatus?.code ?: "") }
+        var isUpdating by remember { mutableStateOf(false) }
 
-    val filteredRtdb = remember(filterText) {
-        if (filterText.isBlank()) rtdbCodes
-        else rtdbCodes.filter { it.first.contains(filterText, ignoreCase = true) || it.second.contains(filterText, ignoreCase = true) }
-    }
+        AlertDialog(
+            onDismissRequest = { if (!isUpdating) showStatusChangeDialog = false },
+            containerColor = CryptoSurface,
+            title = { Text("Reset Status to Unused", color = WarningAmber, fontWeight = FontWeight.Bold, fontSize = 16.sp) },
+            text = {
+                Column {
+                    Text(
+                        text = "This will update the code's status in Firebase Realtime Database from 'used' back to 'unused', enabling it to be redeemed again.",
+                        fontSize = 12.sp,
+                        color = TextSecondary
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+                    OutlinedTextField(
+                        value = inputCodeToReset,
+                        onValueChange = { inputCodeToReset = it.trim() },
+                        label = { Text("Code to Reset", fontSize = 11.sp) },
+                        placeholder = { Text("e.g. STAI-X436-7S7Q-LY4A", fontSize = 11.sp) },
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = WarningAmber,
+                            unfocusedBorderColor = CryptoCardBorder,
+                            focusedTextColor = TextPrimary,
+                            unfocusedTextColor = TextPrimary
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val target = inputCodeToReset.trim()
+                        if (target.isBlank()) return@Button
 
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(14.dp)
-    ) {
-        item {
-            Text(
-                text = "⚡ Realtime Database Codes (${rtdbCodes.size} Available)",
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Bold,
-                color = AccentCyan
-            )
-            Text(
-                text = "Firebase RTDB: gen-lang-client-0963937245-default-rtdb",
-                fontSize = 10.sp,
-                color = TextMuted
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            OutlinedTextField(
-                value = filterText,
-                onValueChange = { filterText = it },
-                label = { Text("Filter codes (e.g. GOLD, SILVER, BRONZE)", fontSize = 11.sp) },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = AccentCyan,
-                    unfocusedBorderColor = CryptoCardBorder,
-                    focusedTextColor = TextPrimary,
-                    unfocusedTextColor = TextPrimary
-                )
-            )
-            Spacer(modifier = Modifier.height(10.dp))
-        }
+                        val matched = codesList.firstOrNull { it.code.equals(target, ignoreCase = true) || it.key == target }
+                        if (matched == null) {
+                            feedbackMessage = "Code '$target' not found in database"
+                            showStatusChangeDialog = false
+                            return@Button
+                        }
 
-        if (filteredRtdb.isEmpty()) {
-            item {
-                Text("No matching Realtime Database codes.", fontSize = 12.sp, color = TextMuted)
-            }
-        }
+                        isUpdating = true
+                        val database = ActivationHelper.getDatabase(context)
+                        val ref = database?.getReference("activation_codes")?.child("activationCodes")
 
-        items(filteredRtdb.take(50)) { item ->
-            val code = item.first
-            val plan = item.second
-            val price = item.third
-            val planColor = when (plan.lowercase()) {
-                "golden", "gold" -> Color(0xFFFFD700)
-                "silver" -> Color(0xFFC0C0C0)
-                else -> Color(0xFFCD7F32)
-            }
-
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 4.dp),
-                colors = CardDefaults.cardColors(containerColor = CryptoSurface),
-                shape = RoundedCornerShape(8.dp)
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(10.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(text = code, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = planColor)
-                        Text(
-                            text = "Plan: ${plan.uppercase()} | Price: PKR $price (30 Days)",
-                            fontSize = 10.sp,
-                            color = TextSecondary
+                        val updates = mapOf<String, Any>(
+                            "status" to "unused",
+                            "isUsed" to false,
+                            "usedByDevice" to ""
                         )
-                    }
-                    IconButton(
-                        onClick = {
-                            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                            clipboard.setPrimaryClip(ClipData.newPlainText("Activation Code", code))
-                            android.widget.Toast.makeText(context, "Copied: $code", android.widget.Toast.LENGTH_SHORT).show()
+
+                        ref?.child(matched.key)?.updateChildren(updates)?.addOnSuccessListener {
+                            isUpdating = false
+                            showStatusChangeDialog = false
+                            codeToResetStatus = null
+                            feedbackMessage = "Code ${matched.code} status changed from used to unused!"
+                        }?.addOnFailureListener {
+                            isUpdating = false
+                            feedbackMessage = "Failed to update: ${it.localizedMessage}"
                         }
-                    ) {
-                        Icon(imageVector = Icons.Default.ContentCopy, contentDescription = "Copy Code", tint = AccentCyan)
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = WarningAmber),
+                    enabled = !isUpdating
+                ) {
+                    if (isUpdating) {
+                        CircularProgressIndicator(color = Color.Black, modifier = Modifier.size(16.dp))
+                    } else {
+                        Text("Reset to Unused", color = Color.Black, fontWeight = FontWeight.Bold)
                     }
                 }
-            }
-        }
-
-        if (filteredRtdb.size > 50) {
-            item {
-                Text(
-                    text = "... and ${filteredRtdb.size - 50} more codes. Use filter above to search.",
-                    fontSize = 11.sp,
-                    color = TextMuted,
-                    modifier = Modifier.padding(vertical = 8.dp)
-                )
-            }
-        }
-
-        item {
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                text = "Custom Issued Codes (${codes.size})",
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Bold,
-                color = BullGreen
-            )
-            Spacer(modifier = Modifier.height(6.dp))
-        }
-
-        if (codes.isEmpty()) {
-            item {
-                Text("No custom issued activation keys found.", fontSize = 11.sp, color = TextMuted)
-            }
-        }
-
-        items(codes) { obj ->
-            val code = obj.optString("code")
-            val userRef = obj.optString("userRef")
-            val plan = obj.optString("plan")
-            val paymentRef = obj.optString("paymentRef")
-            val createdAt = obj.optLong("createdAt")
-
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 4.dp),
-                colors = CardDefaults.cardColors(containerColor = CryptoSurface),
-                shape = RoundedCornerShape(8.dp)
-            ) {
-                Column(modifier = Modifier.padding(12.dp)) {
-                    Text(text = code, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = BullGreen)
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(text = "Target User: $userRef | Plan: $plan", fontSize = 11.sp, color = TextSecondary)
-                    Text(text = "Payment Ref: $paymentRef", fontSize = 10.sp, color = TextMuted)
-                    Text(text = "Issued: ${dateFormat.format(Date(createdAt))}", fontSize = 10.sp, color = TextMuted)
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Button(
-                            onClick = {
-                                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                                clipboard.setPrimaryClip(ClipData.newPlainText("Activation Code", code))
-                                android.widget.Toast.makeText(context, "Copied: $code", android.widget.Toast.LENGTH_SHORT).show()
-                            },
-                            colors = ButtonDefaults.buttonColors(containerColor = AccentCyan),
-                            shape = RoundedCornerShape(4.dp)
-                        ) {
-                            Text("Copy", fontSize = 10.sp, color = Color.Black)
-                        }
-                        Button(
-                            onClick = { subscriptionManager.revokeIssuedCode(code) },
-                            colors = ButtonDefaults.buttonColors(containerColor = BearRed),
-                            shape = RoundedCornerShape(4.dp)
-                        ) {
-                            Text("Revoke Key", fontSize = 10.sp, color = Color.White)
-                        }
-                    }
+            },
+            dismissButton = {
+                TextButton(onClick = { showStatusChangeDialog = false }, enabled = !isUpdating) {
+                    Text("Cancel", color = TextMuted)
                 }
             }
-        }
-    }
-}
-
-@Composable
-private fun AuditLogTab(auditLogs: List<com.example.domain.model.AdminAuditRecord>) {
-    val dateFormat = remember { SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()) }
-
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(14.dp)
-    ) {
-        if (auditLogs.isEmpty()) {
-            item {
-                Text("No administrative audit entries logged yet.", fontSize = 12.sp, color = TextMuted)
-            }
-        }
-
-        items(auditLogs) { log ->
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 3.dp),
-                colors = CardDefaults.cardColors(containerColor = CryptoSurface),
-                shape = RoundedCornerShape(6.dp)
-            ) {
-                Column(modifier = Modifier.padding(10.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text(text = log.action, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = AccentCyan)
-                        Text(text = dateFormat.format(Date(log.timestamp)), fontSize = 9.sp, color = TextMuted)
-                    }
-                    Text(text = "Target: ${log.userReference} (${log.plan})", fontSize = 10.sp, color = TextSecondary)
-                    Text(text = log.details, fontSize = 10.sp, color = TextMuted)
-                }
-            }
-        }
+        )
     }
 }

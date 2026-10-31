@@ -14,7 +14,7 @@ import java.util.Calendar
 
 object ActivationHelper {
 
-    private fun getDatabase(context: Context): FirebaseDatabase? {
+    fun getDatabase(context: Context): FirebaseDatabase? {
         return try {
             if (FirebaseApp.getApps(context).isEmpty()) {
                 val app = FirebaseApp.initializeApp(context)
