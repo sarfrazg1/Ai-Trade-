@@ -317,10 +317,12 @@ object ConfluenceEngine {
                 stopLoss = if (demand != null) demand.bottomPrice - atr * 0.5 else currentPrice - atr * 1.5
                 invalidation = stopLoss
 
-                val riskDistance = abs(entryMax - stopLoss)
+                val riskDistance = abs(entryMax - stopLoss).coerceAtLeast(atr * 0.5)
                 tp1 = entryMax + riskDistance * 1.5
-                tp2 = if (fibo != null) fibo.extension1272 else entryMax + riskDistance * 2.5
-                tp3 = if (fibo != null) fibo.extension1618 else entryMax + riskDistance * 4.0
+                val fibo1272 = fibo?.extension1272 ?: 0.0
+                tp2 = if (fibo1272 > tp1) fibo1272 else (tp1 + riskDistance * 1.0)
+                val fibo1618 = fibo?.extension1618 ?: 0.0
+                tp3 = if (fibo1618 > tp2) fibo1618 else (tp2 + riskDistance * 1.5)
             }
             SignalType.SHORT -> {
                 val supply = smc.activeSupplyZone
@@ -329,10 +331,12 @@ object ConfluenceEngine {
                 stopLoss = if (supply != null) supply.topPrice + atr * 0.5 else currentPrice + atr * 1.5
                 invalidation = stopLoss
 
-                val riskDistance = abs(stopLoss - entryMin)
+                val riskDistance = abs(stopLoss - entryMin).coerceAtLeast(atr * 0.5)
                 tp1 = entryMin - riskDistance * 1.5
-                tp2 = if (fibo != null) fibo.extension1272 else entryMin - riskDistance * 2.5
-                tp3 = if (fibo != null) fibo.extension1618 else entryMin - riskDistance * 4.0
+                val fibo1272 = fibo?.extension1272 ?: 0.0
+                tp2 = if (fibo1272 in 0.01..<tp1) fibo1272 else (tp1 - riskDistance * 1.0)
+                val fibo1618 = fibo?.extension1618 ?: 0.0
+                tp3 = if (fibo1618 in 0.01..<tp2) fibo1618 else (tp2 - riskDistance * 1.5)
             }
             SignalType.WAIT -> {
                 entryMin = currentPrice * 0.99
@@ -395,8 +399,10 @@ object ConfluenceEngine {
         val slDist = abs(currentPrice - stopLoss)
         val slDistPct = if (currentPrice > 0) (slDist / currentPrice) else 0.02
 
-        // Position size in USD such that if SL is hit, loss = riskAmount
-        val positionSizeUsd = if (slDistPct > 0) riskAmount / slDistPct else 0.0
+        // Position size in USD such that if SL is hit, loss = riskAmount, capped at max buying power
+        val maxAllowedPositionUsd = accountBalance * leverage
+        val calculatedSizeUsd = if (slDistPct > 0) riskAmount / slDistPct else 0.0
+        val positionSizeUsd = minOf(calculatedSizeUsd, maxAllowedPositionUsd)
         val coinQuantity = if (currentPrice > 0) positionSizeUsd / currentPrice else 0.0
 
         // Estimated fee for VIP0/taker (approx 0.05% on entry + exit = 0.1% of position size)

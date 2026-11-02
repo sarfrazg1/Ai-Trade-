@@ -69,6 +69,7 @@ fun PaperTradingScreen(
     livePrices: Map<String, Double> = emptyMap(),
     currentSymbol: String = "BTCUSDT",
     backtestSummary: BacktestSummary?,
+    isRomanUrdu: Boolean = false,
     onCloseTrade: (PaperTradeEntity) -> Unit,
     onDeleteTrade: (PaperTradeEntity) -> Unit,
     onDeleteSignal: (SavedSignalEntity) -> Unit,
@@ -179,22 +180,22 @@ fun PaperTradingScreen(
             Tab(
                 selected = selectedSubTab == 0,
                 onClick = { selectedSubTab = 0 },
-                text = { Text("Open (${openTrades.size})", fontSize = 12.sp) }
+                text = { Text(if (isRomanUrdu) "Chalti (${openTrades.size})" else "Open (${openTrades.size})", fontSize = 12.sp) }
             )
             Tab(
                 selected = selectedSubTab == 1,
                 onClick = { selectedSubTab = 1 },
-                text = { Text("History (${closedTrades.size})", fontSize = 12.sp) }
+                text = { Text(if (isRomanUrdu) "Tareekh (${closedTrades.size})" else "History (${closedTrades.size})", fontSize = 12.sp) }
             )
             Tab(
                 selected = selectedSubTab == 2,
                 onClick = { selectedSubTab = 2 },
-                text = { Text("Saved (${savedSignals.size})", fontSize = 12.sp) }
+                text = { Text(if (isRomanUrdu) "Signals (${savedSignals.size})" else "Saved (${savedSignals.size})", fontSize = 12.sp) }
             )
             Tab(
                 selected = selectedSubTab == 3,
                 onClick = { selectedSubTab = 3 },
-                text = { Text("Backtester", fontSize = 12.sp) }
+                text = { Text(if (isRomanUrdu) "Test Strategy" else "Backtester", fontSize = 12.sp) }
             )
         }
 

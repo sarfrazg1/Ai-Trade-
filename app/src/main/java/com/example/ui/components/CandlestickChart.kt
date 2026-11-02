@@ -284,8 +284,17 @@ fun CandlestickChart(
                 }
 
                 if (currentActiveTrade != null) {
-                    minPrice = minOf(minPrice, currentActiveTrade.stopLoss, currentActiveTrade.entryPrice)
-                    maxPrice = maxOf(maxPrice, currentActiveTrade.tp1, currentActiveTrade.entryPrice)
+                    val tradeLevels = listOfNotNull(
+                        currentActiveTrade.stopLoss.takeIf { it > 0 },
+                        currentActiveTrade.entryPrice.takeIf { it > 0 },
+                        currentActiveTrade.tp1.takeIf { it > 0 },
+                        currentActiveTrade.tp2.takeIf { it > 0 },
+                        currentActiveTrade.tp3.takeIf { it > 0 }
+                    )
+                    if (tradeLevels.isNotEmpty()) {
+                        minPrice = minOf(minPrice, tradeLevels.minOrNull() ?: minPrice)
+                        maxPrice = maxOf(maxPrice, tradeLevels.maxOrNull() ?: maxPrice)
+                    }
                 }
 
                 val pricePadding = (maxPrice - minPrice) * 0.10
@@ -296,7 +305,7 @@ fun CandlestickChart(
                 Canvas(
                     modifier = Modifier
                         .fillMaxSize()
-                        .pointerInput(candles.size, visibleCount, panOffset) {
+                        .pointerInput(candles.size) {
                             awaitPointerEventScope {
                                 while (true) {
                                     val down = awaitFirstDown(requireUnconsumed = false)
@@ -409,11 +418,11 @@ fun CandlestickChart(
 
                     // 3. Draw SMC Overlays: Order Blocks & FVGs
                     if (showOrderBlocks) {
-                        drawOrderBlocks(smc, visibleCandles, candles.size, slotWidth, chartMin, chartMax, canvasHeight, canvasWidth)
+                        drawOrderBlocks(smc, visibleCandles, startIndex, slotWidth, chartMin, chartMax, canvasHeight, canvasWidth)
                     }
 
                     if (showFvg) {
-                        drawFvgZones(smc, visibleCandles, candles.size, slotWidth, chartMin, chartMax, canvasHeight, canvasWidth)
+                        drawFvgZones(smc, visibleCandles, startIndex, slotWidth, chartMin, chartMax, canvasHeight, canvasWidth)
                     }
 
                     // 4. Draw Volume Bars at bottom 14% of canvas
@@ -464,17 +473,17 @@ fun CandlestickChart(
 
                     // 6. Draw Technical Indicator Overlays: EMAs & Bollinger Bands
                     if (showEma) {
-                        drawEmaLine(candles, visibleCandles, 20, chartMin, priceRange, slotWidth, canvasHeight, AccentCyan)
-                        drawEmaLine(candles, visibleCandles, 50, chartMin, priceRange, slotWidth, canvasHeight, WarningAmber)
+                        drawEmaLine(candles, visibleCandles, startIndex, 20, chartMin, priceRange, slotWidth, canvasHeight, AccentCyan)
+                        drawEmaLine(candles, visibleCandles, startIndex, 50, chartMin, priceRange, slotWidth, canvasHeight, WarningAmber)
                     }
 
                     if (showBollinger) {
-                        drawBollingerOverlay(candles, visibleCandles, chartMin, priceRange, slotWidth, canvasHeight)
+                        drawBollingerOverlay(candles, visibleCandles, startIndex, chartMin, priceRange, slotWidth, canvasHeight)
                     }
 
                     // 7. Draw BOS / CHoCH Lines
                     if (showBos) {
-                        drawBosLines(smc, visibleCandles, candles.size, slotWidth, chartMin, priceRange, canvasHeight, textMeasurer)
+                        drawBosLines(smc, visibleCandles, startIndex, slotWidth, chartMin, priceRange, canvasHeight, textMeasurer)
                     }
 
                     // 8. TASK 2: Current Price Floating Label on the right edge (always visible, moving up/down)
@@ -1097,7 +1106,7 @@ private fun DrawScope.drawPaperTradeChartOverlay(
         )
     }
 
-    // 2. Draw Take Profit Line (Green dashed)
+    // 2. Draw Take Profit Lines (Green dashed)
     if (trade.tp1 in chartMin..chartMax) {
         val yTp = yOf(trade.tp1)
         drawLine(
@@ -1108,7 +1117,7 @@ private fun DrawScope.drawPaperTradeChartOverlay(
             pathEffect = PathEffect.dashPathEffect(floatArrayOf(8f, 6f))
         )
 
-        val tpLabel = if (isRomanUrdu) "TP1 (Nafa): $${formatShortPrice(trade.tp1)}" else "TP1 (Target): $${formatShortPrice(trade.tp1)}"
+        val tpLabel = if (isRomanUrdu) "TP1: $${formatShortPrice(trade.tp1)}" else "TP1: $${formatShortPrice(trade.tp1)}"
         val layout = textMeasurer.measure(
             text = tpLabel,
             style = TextStyle(fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color.Black)
@@ -1121,6 +1130,58 @@ private fun DrawScope.drawPaperTradeChartOverlay(
         drawText(
             textLayoutResult = layout,
             topLeft = Offset(14f, yTp - layout.size.height)
+        )
+    }
+
+    if (trade.tp2 in chartMin..chartMax) {
+        val yTp2 = yOf(trade.tp2)
+        drawLine(
+            color = BullGreen.copy(alpha = 0.85f),
+            start = Offset(0f, yTp2),
+            end = Offset(canvasWidth, yTp2),
+            strokeWidth = 1.6f,
+            pathEffect = PathEffect.dashPathEffect(floatArrayOf(6f, 5f))
+        )
+
+        val tp2Label = if (isRomanUrdu) "TP2: $${formatShortPrice(trade.tp2)}" else "TP2: $${formatShortPrice(trade.tp2)}"
+        val layout = textMeasurer.measure(
+            text = tp2Label,
+            style = TextStyle(fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+        )
+        drawRect(
+            color = BullGreen.copy(alpha = 0.85f),
+            topLeft = Offset(8f, yTp2 - layout.size.height - 2f),
+            size = Size(layout.size.width + 12f, layout.size.height + 4f)
+        )
+        drawText(
+            textLayoutResult = layout,
+            topLeft = Offset(14f, yTp2 - layout.size.height)
+        )
+    }
+
+    if (trade.tp3 in chartMin..chartMax) {
+        val yTp3 = yOf(trade.tp3)
+        drawLine(
+            color = GoldenPocketGold,
+            start = Offset(0f, yTp3),
+            end = Offset(canvasWidth, yTp3),
+            strokeWidth = 1.6f,
+            pathEffect = PathEffect.dashPathEffect(floatArrayOf(6f, 4f))
+        )
+
+        val tp3Label = if (isRomanUrdu) "TP3 (Max): $${formatShortPrice(trade.tp3)}" else "TP3 (Max): $${formatShortPrice(trade.tp3)}"
+        val layout = textMeasurer.measure(
+            text = tp3Label,
+            style = TextStyle(fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+        )
+        drawRect(
+            color = GoldenPocketGold,
+            topLeft = Offset(8f, yTp3 - layout.size.height - 2f),
+            size = Size(layout.size.width + 12f, layout.size.height + 4f)
+        )
+        drawText(
+            textLayoutResult = layout,
+            topLeft = Offset(14f, yTp3 - layout.size.height)
         )
     }
 
@@ -1273,7 +1334,7 @@ private fun DrawScope.drawFibonacciOverlay(
 private fun DrawScope.drawOrderBlocks(
     smc: SmartMoneyConcepts,
     visibleCandles: List<Candle>,
-    totalCandles: Int,
+    startIndex: Int,
     slotWidth: Float,
     chartMin: Double,
     chartMax: Double,
@@ -1282,7 +1343,6 @@ private fun DrawScope.drawOrderBlocks(
 ) {
     val range = chartMax - chartMin
     if (range <= 0) return
-    val startIndex = totalCandles - visibleCandles.size
 
     for (ob in smc.orderBlocks) {
         if (!ob.mitigated && (ob.topPrice in chartMin..chartMax || ob.bottomPrice in chartMin..chartMax)) {
@@ -1304,7 +1364,7 @@ private fun DrawScope.drawOrderBlocks(
 private fun DrawScope.drawFvgZones(
     smc: SmartMoneyConcepts,
     visibleCandles: List<Candle>,
-    totalCandles: Int,
+    startIndex: Int,
     slotWidth: Float,
     chartMin: Double,
     chartMax: Double,
@@ -1313,7 +1373,6 @@ private fun DrawScope.drawFvgZones(
 ) {
     val range = chartMax - chartMin
     if (range <= 0) return
-    val startIndex = totalCandles - visibleCandles.size
 
     for (fvg in smc.fvgList.takeLast(4)) {
         if (!fvg.mitigated && fvg.topPrice in chartMin..chartMax) {
@@ -1335,6 +1394,7 @@ private fun DrawScope.drawFvgZones(
 private fun DrawScope.drawEmaLine(
     allCandles: List<Candle>,
     visibleCandles: List<Candle>,
+    startIndex: Int,
     period: Int,
     chartMin: Double,
     priceRange: Double,
@@ -1346,7 +1406,6 @@ private fun DrawScope.drawEmaLine(
     val emaSeries = TechnicalIndicatorsCalculator.calculateEmaSeries(closes, period)
     if (emaSeries.isEmpty()) return
 
-    val startIndex = allCandles.size - visibleCandles.size
     val path = Path()
     var started = false
 
@@ -1372,13 +1431,13 @@ private fun DrawScope.drawEmaLine(
 private fun DrawScope.drawBollingerOverlay(
     allCandles: List<Candle>,
     visibleCandles: List<Candle>,
+    startIndex: Int,
     chartMin: Double,
     priceRange: Double,
     slotWidth: Float,
     canvasHeight: Float
 ) {
     val closes = allCandles.map { it.close }
-    val startIndex = allCandles.size - visibleCandles.size
     val upperPath = Path()
     val lowerPath = Path()
     var started = false
@@ -1412,14 +1471,13 @@ private fun DrawScope.drawBollingerOverlay(
 private fun DrawScope.drawBosLines(
     smc: SmartMoneyConcepts,
     visibleCandles: List<Candle>,
-    totalCandles: Int,
+    startIndex: Int,
     slotWidth: Float,
     chartMin: Double,
     priceRange: Double,
     canvasHeight: Float,
     textMeasurer: TextMeasurer
 ) {
-    val startIndex = totalCandles - visibleCandles.size
     for (bos in smc.bosList.takeLast(3)) {
         val localIdx = bos.candleIndex - startIndex
         if (localIdx in visibleCandles.indices) {
@@ -1449,7 +1507,8 @@ private fun formatHeaderPrice(p: Double): String {
     return when {
         p >= 1000.0 -> String.format(Locale.US, "%,.2f", p)
         p >= 1.0 -> String.format(Locale.US, "%.2f", p)
-        else -> String.format(Locale.US, "%.4f", p)
+        p >= 0.001 -> String.format(Locale.US, "%.4f", p)
+        else -> String.format(Locale.US, "%.8f", p)
     }
 }
 
@@ -1457,7 +1516,8 @@ private fun formatShortPrice(p: Double): String {
     return when {
         p >= 1000.0 -> String.format(Locale.US, "%,.1f", p)
         p >= 1.0 -> String.format(Locale.US, "%.2f", p)
-        else -> String.format(Locale.US, "%.4f", p)
+        p >= 0.001 -> String.format(Locale.US, "%.4f", p)
+        else -> String.format(Locale.US, "%.8f", p)
     }
 }
 

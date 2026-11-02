@@ -19,10 +19,12 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -61,6 +63,7 @@ import com.example.ui.theme.CryptoBackground
 import com.example.ui.theme.CryptoCardBorder
 import com.example.ui.theme.CryptoSurface
 import com.example.ui.theme.CryptoSurfaceVariant
+import com.example.ui.theme.GoldenPocketGold
 import com.example.ui.theme.TextMuted
 import com.example.ui.theme.TextPrimary
 import com.example.ui.theme.TextSecondary
@@ -79,6 +82,7 @@ fun PlanAndConfluenceScreen(
     onUpdateRisk: (Double, Double, Int) -> Unit,
     onExecutePaperTrade: () -> Unit,
     onSaveSignal: () -> Unit,
+    onNavigateToSmcDetail: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val plan = analysis.tradingPlan
@@ -95,7 +99,65 @@ fun PlanAndConfluenceScreen(
         // 1. Hero Signal Banner
         HeroSignalBanner(plan = plan, confluence = confluence, isRomanUrdu = isRomanUrdu)
 
-        Spacer(modifier = Modifier.height(14.dp))
+        Spacer(modifier = Modifier.height(10.dp))
+
+        // Quick SMC & Fibonacci Pair Detail Navigation Card
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { onNavigateToSmcDetail() }
+                .testTag("btn_signal_to_smc_fib"),
+            shape = RoundedCornerShape(12.dp),
+            colors = CardDefaults.cardColors(containerColor = CryptoSurface),
+            border = androidx.compose.foundation.BorderStroke(1.dp, GoldenPocketGold.copy(alpha = 0.45f))
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 14.dp, vertical = 11.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(30.dp)
+                            .clip(CircleShape)
+                            .background(GoldenPocketGold.copy(alpha = 0.2f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Tune,
+                            contentDescription = null,
+                            tint = GoldenPocketGold,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Column {
+                        Text(
+                            text = if (isRomanUrdu) "${plan.symbol} SMC & Fibonacci Jaiza" else "${plan.symbol} SMC & Fibonacci Tool",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = TextPrimary
+                        )
+                        Text(
+                            text = if (isRomanUrdu) "Order Blocks, FVG Imbalances aur Golden Pocket Ladder" else "Inspect Order Blocks, FVGs & Custom Golden Pocket",
+                            fontSize = 11.sp,
+                            color = GoldenPocketGold
+                        )
+                    }
+                }
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                    contentDescription = null,
+                    tint = GoldenPocketGold,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
 
         // 2. Confluence Score Gauge Card
         ConfluenceScoreCard(confluence = confluence, isRomanUrdu = isRomanUrdu)
@@ -672,14 +734,15 @@ private fun translateFactorToRomanUrdu(factor: String): String {
         f.contains("higher timeframe 4h trend is bearish") -> "Bari timeframe (4H) ka trend Bearish hai (Farokht ka rujhan)."
         f.contains("daily macro trend is bullish") -> "Daily (1D) macro trend mazboot Bullish hai."
         f.contains("daily macro trend is bearish") -> "Daily (1D) macro trend Bearish hai."
-        f.contains("price above ema 20 and ema 50") -> "Price EMA 20 aur EMA 50 k upar chal rahi hai (Mazboot Uptrend)."
-        f.contains("price below ema 20 and ema 50") -> "Price EMA 20 aur EMA 50 k nechy chal rahi hai (Mazboot Downtrend)."
+        f.contains("bullish ema 20/50 alignment") || (f.contains("ema") && f.contains("above")) -> "EMA 20/50 Bullish: Price moving averages se upar chal rahi hai (Mazboot Uptrend)."
+        f.contains("bearish ema 20/50 alignment") || (f.contains("ema") && f.contains("below")) -> "EMA 20/50 Bearish: Price moving averages se nechy chal rahi hai (Mazboot Downtrend)."
+        f.contains("emas tangled") -> "EMAs tangled/neutral hain, price filhal squeeze ho rahi hai."
+        f.contains("rsi") && f.contains("overbought") -> "RSI Overbought zone me hai (>70), pull back ka khatra barh gaya hai."
+        f.contains("rsi") && f.contains("oversold") -> "RSI Oversold zone me hai (<30), market me bounce ka imkan hai."
         f.contains("rsi") && f.contains("bullish") -> "RSI momentum Bullish hai (Buyers market control kar rahy hain)."
         f.contains("rsi") && f.contains("bearish") -> "RSI momentum Bearish hai (Sellers ka dabao ziada hai)."
-        f.contains("rsi") && f.contains("oversold") -> "RSI oversold zone me hai, bounce hone k imkanat hain."
-        f.contains("rsi") && f.contains("overbought") -> "RSI overbought zone me hai, pull back ka khatra hai."
-        f.contains("macd histogram is bullish") -> "MACD Histogram positive hai aur upar barh raha hai."
-        f.contains("macd histogram is bearish") -> "MACD Histogram negative hai aur nechy ja raha hai."
+        f.contains("macd histogram positive") || (f.contains("macd") && f.contains("bullish")) -> "MACD Histogram positive hai aur bullish momentum barh raha hai."
+        f.contains("macd histogram negative") || (f.contains("macd") && f.contains("bearish")) -> "MACD Histogram negative hai aur bearish momentum barh raha hai."
         f.contains("bullish break of structure") || f.contains("bullish bos") -> "Bullish Break of Structure (BOS) confirm hua hai (Trend agay barh raha hai)."
         f.contains("bearish break of structure") || f.contains("bearish bos") -> "Bearish Break of Structure (BOS) confirm hua hai (Trend nechy toot raha hai)."
         f.contains("change of character") || f.contains("choch") -> "Change of Character (CHoCH) structural reversal ka ishara de raha hai."
@@ -687,10 +750,12 @@ private fun translateFactorToRomanUrdu(factor: String): String {
         f.contains("bearish order block") -> "Bearish Order Block (Institutions ki supply zone) kareeb hai."
         f.contains("fair value gap") || f.contains("fvg") -> "Fair Value Gap (FVG price pocket) retest ho chuki hai."
         f.contains("liquidity sweep") -> "Liquidity sweep ho chuki hai (Stop hunts mukammal ho gaye)."
-        f.contains("fibonacci golden pocket") -> "Price Fibonacci Golden Pocket (61.8% - 78.6%) key level per hai."
-        f.contains("funding rate is negative") -> "Futures Funding Rate negative hai (Short squeeze ka imkan)."
-        f.contains("funding rate is positive") -> "Futures Funding Rate positive hai (Long positions active hain)."
+        f.contains("fibonacci golden pocket") -> "Price Fibonacci Golden Pocket (61.8% - 65%) ahem zone me hai."
+        f.contains("key fibo levels active") -> "Key Fibonacci levels (50% aur 61.8%) active hain."
+        f.contains("funding rate negative") -> "Futures Funding Rate negative hai (Short squeeze ka imkan)."
+        f.contains("funding rate positive") -> "Futures Funding Rate positive hai (Long positions active hain)."
         f.contains("open interest is rising") -> "Open Interest (OI) barh raha hai (Naya sarmaya futures market me aa raha hai)."
+        f.contains("long/short account ratio") -> "Futures Long/Short ratio data active hai."
         f.contains("volume above 20-period average") -> "Volume 20-period average se ziada hai (Bari activity)."
         f.contains("timeframe conflict") -> "Timeframes aapas me mukhalif hain (4H aur 15m me farq hai)."
         f.contains("resistance") -> "Price ahem Resistance zone k bilkul kareeb hai."
@@ -717,14 +782,14 @@ private fun RiskCalculatorCard(
     ) {
         Column(modifier = Modifier.padding(14.dp)) {
             Text(
-                text = "Position Sizing & Risk Management",
+                text = if (isRomanUrdu) "Position Size aur Risk Management" else "Position Sizing & Risk Management",
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Bold,
                 color = TextPrimary
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = "Calculates exact position size so stop-loss strictly limits your loss.",
+                text = if (isRomanUrdu) "Sahi position size calculate karein taakay Stop-loss aapka nuqsan strictly limit me rakhay." else "Calculates exact position size so stop-loss strictly limits your loss.",
                 fontSize = 10.sp,
                 color = TextMuted
             )
@@ -746,14 +811,14 @@ private fun RiskCalculatorCard(
                             onUpdateRisk(b, riskPercent, leverage)
                         }
                     },
-                    label = { Text("Balance ($)", fontSize = 10.sp) },
+                    label = { Text(if (isRomanUrdu) "Balance ($)" else "Balance ($)", fontSize = 10.sp) },
                     singleLine = true,
                     modifier = Modifier.weight(1f)
                 )
 
                 // Risk % Selector
                 Column(modifier = Modifier.weight(1f)) {
-                    Text("Risk %: ${riskPercent}%", fontSize = 11.sp, color = TextSecondary)
+                    Text(if (isRomanUrdu) "Khatra: ${riskPercent}%" else "Risk %: ${riskPercent}%", fontSize = 11.sp, color = TextSecondary)
                     Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                         listOf(1.0, 2.0, 3.0).forEach { r ->
                             val isSel = r == riskPercent
@@ -777,7 +842,7 @@ private fun RiskCalculatorCard(
 
                 // Leverage Selector
                 Column(modifier = Modifier.weight(1f)) {
-                    Text("Leverage: ${leverage}x", fontSize = 11.sp, color = TextSecondary)
+                    Text(if (isRomanUrdu) "Leverage: ${leverage}x" else "Leverage: ${leverage}x", fontSize = 11.sp, color = TextSecondary)
                     Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                         listOf(2, 5, 10).forEach { lev ->
                             val isSel = lev == leverage
@@ -805,22 +870,22 @@ private fun RiskCalculatorCard(
             val pos = plan.positionCalc
             if (pos != null) {
                 PlanMetricRow(
-                    label = "Max Dollar Risk",
+                    label = if (isRomanUrdu) "Khatray Ki Raqam (Max Risk)" else "Max Dollar Risk",
                     value = "$${formatPrice(pos.riskAmount)}",
                     color = BearRed
                 )
                 PlanMetricRow(
-                    label = "Suggested Position Size",
+                    label = if (isRomanUrdu) "Tajweez Karda Position Size" else "Suggested Position Size",
                     value = "$${formatPrice(pos.positionSizeUsd)} (${String.format("%.4f", pos.coinQuantity)} coins)",
                     color = AccentCyan
                 )
                 PlanMetricRow(
-                    label = "Required Margin (Capital)",
+                    label = if (isRomanUrdu) "Zaroori Margin (Aapka Sarmaya)" else "Required Margin (Capital)",
                     value = "$${formatPrice(pos.positionSizeUsd / leverage)}",
                     color = TextPrimary
                 )
                 PlanMetricRow(
-                    label = "Est. Liquidation Price",
+                    label = if (isRomanUrdu) "Andazan Liquidation Price" else "Est. Liquidation Price",
                     value = "$${formatPrice(pos.estimatedLiquidationPrice)}",
                     color = WarningAmber
                 )
@@ -828,7 +893,7 @@ private fun RiskCalculatorCard(
 
             Spacer(modifier = Modifier.height(6.dp))
             Text(
-                text = "⚠️ Warning: Higher leverage multiplies liquidation hazard. Never risk more than you can afford to lose.",
+                text = if (isRomanUrdu) "⚠️ Khabardar: Ziada leverage liquidation ka khatra barha deti hai. Hamesha stop loss use karein." else "⚠️ Warning: Higher leverage multiplies liquidation hazard. Never risk more than you can afford to lose.",
                 fontSize = 10.sp,
                 color = WarningAmber
             )

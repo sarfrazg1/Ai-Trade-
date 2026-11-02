@@ -54,6 +54,7 @@ fun FuturesAnalyticsScreen(
     smc: SmartMoneyConcepts,
     currentPrice: Double,
     hasFuturesAccess: Boolean = true,
+    isRomanUrdu: Boolean = false,
     onOpenSubscription: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
@@ -65,13 +66,13 @@ fun FuturesAnalyticsScreen(
             .padding(14.dp)
     ) {
         Text(
-            text = "Futures & Derivatives Analytics",
+            text = if (isRomanUrdu) "Futures & Derivatives Analytics" else "Futures & Derivatives Analytics",
             fontSize = 17.sp,
             fontWeight = FontWeight.Bold,
             color = TextPrimary
         )
         Text(
-            text = "Funding rate, open interest, account positioning, and structural liquidity.",
+            text = if (isRomanUrdu) "Funding rate, open interest, account positioning aur structural liquidity." else "Funding rate, open interest, account positioning, and structural liquidity.",
             fontSize = 11.sp,
             color = TextMuted
         )

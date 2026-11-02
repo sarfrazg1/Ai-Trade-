@@ -11,7 +11,21 @@ import com.example.domain.model.Timeframe
 object DefaultMarketSnapshot {
 
     fun createInitialSnapshot(symbol: String, timeframe: Timeframe): CompleteAnalysisResult {
-        val basePrice = if (symbol.contains("ETH")) 2320.0 else 80200.0
+        val symUpper = symbol.uppercase()
+        val basePrice = when {
+            symUpper.contains("BTC") -> 91400.0
+            symUpper.contains("ETH") -> 2640.0
+            symUpper.contains("SOL") -> 168.0
+            symUpper.contains("BNB") -> 590.0
+            symUpper.contains("XRP") -> 0.54
+            symUpper.contains("DOGE") -> 0.14
+            symUpper.contains("ADA") -> 0.35
+            symUpper.contains("AVAX") -> 26.50
+            symUpper.contains("LINK") -> 11.50
+            symUpper.contains("WTI") || symUpper.contains("CL") || symUpper.contains("OIL") -> 71.45
+            symUpper.contains("PEPE") || symUpper.contains("SHIB") -> 0.0000185
+            else -> 10.0
+        }
         val now = System.currentTimeMillis()
         val intervalMs = timeframe.minutes * 60 * 1000L
 

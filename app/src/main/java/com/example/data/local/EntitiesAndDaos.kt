@@ -31,6 +31,7 @@ data class SavedSignalEntity(
     val stopLoss: Double,
     val tp1: Double,
     val tp2: Double,
+    val tp3: Double = 0.0,
     val riskReward: Double,
     val timestamp: Long,
     val summary: String
@@ -45,12 +46,13 @@ data class PaperTradeEntity(
     val stopLoss: Double,
     val tp1: Double,
     val tp2: Double,
+    val tp3: Double = 0.0,
     val margin: Double,
     val leverage: Int,
     val quantity: Double,
     val openTime: Long = System.currentTimeMillis(),
     val closeTime: Long? = null,
-    val status: String = "OPEN", // "OPEN", "CLOSED_TP1", "CLOSED_TP2", "CLOSED_SL", "MANUALLY_CLOSED"
+    val status: String = "OPEN", // "OPEN", "CLOSED_TP1", "CLOSED_TP2", "CLOSED_TP3", "CLOSED_SL", "MANUALLY_CLOSED"
     val exitPrice: Double? = null,
     val pnlUsd: Double? = null
 )
@@ -102,7 +104,7 @@ interface PaperTradeDao {
 
 @Database(
     entities = [WatchlistEntity::class, SavedSignalEntity::class, PaperTradeEntity::class],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

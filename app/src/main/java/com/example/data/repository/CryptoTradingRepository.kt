@@ -85,6 +85,7 @@ class CryptoTradingRepository(
             stopLoss = plan.stopLoss,
             tp1 = plan.tp1,
             tp2 = plan.tp2,
+            tp3 = plan.tp3,
             riskReward = plan.riskRewardRatio,
             timestamp = plan.timestamp,
             summary = plan.summary
@@ -103,6 +104,7 @@ class CryptoTradingRepository(
         stopLoss: Double,
         tp1: Double,
         tp2: Double,
+        tp3: Double = 0.0,
         margin: Double,
         leverage: Int
     ): Long {
@@ -116,6 +118,7 @@ class CryptoTradingRepository(
             stopLoss = stopLoss,
             tp1 = tp1,
             tp2 = tp2,
+            tp3 = tp3,
             margin = margin,
             leverage = leverage,
             quantity = quantity,
@@ -148,7 +151,7 @@ class CryptoTradingRepository(
 
     /**
      * Checks open paper trades against latest price and updates triggered TP or SL.
-     * Prevents any trade closures on 0.0 or invalid prices.
+     * Checks in order: TP3 -> TP2 -> TP1, and SL. Prevents trade closures on 0.0 or invalid prices.
      */
     suspend fun checkOpenTrades(symbol: String, currentPrice: Double) {
         if (currentPrice <= 0.0 || currentPrice.isNaN() || currentPrice.isInfinite()) {
@@ -161,6 +164,8 @@ class CryptoTradingRepository(
             if (isLong) {
                 if (trade.stopLoss > 0.0 && currentPrice <= trade.stopLoss) {
                     closePaperTrade(trade, trade.stopLoss, "CLOSED_SL")
+                } else if (trade.tp3 > 0.0 && currentPrice >= trade.tp3) {
+                    closePaperTrade(trade, trade.tp3, "CLOSED_TP3")
                 } else if (trade.tp2 > 0.0 && currentPrice >= trade.tp2) {
                     closePaperTrade(trade, trade.tp2, "CLOSED_TP2")
                 } else if (trade.tp1 > 0.0 && currentPrice >= trade.tp1) {
@@ -169,6 +174,8 @@ class CryptoTradingRepository(
             } else {
                 if (trade.stopLoss > 0.0 && currentPrice >= trade.stopLoss) {
                     closePaperTrade(trade, trade.stopLoss, "CLOSED_SL")
+                } else if (trade.tp3 > 0.0 && currentPrice <= trade.tp3) {
+                    closePaperTrade(trade, trade.tp3, "CLOSED_TP3")
                 } else if (trade.tp2 > 0.0 && currentPrice <= trade.tp2) {
                     closePaperTrade(trade, trade.tp2, "CLOSED_TP2")
                 } else if (trade.tp1 > 0.0 && currentPrice <= trade.tp1) {
@@ -328,24 +335,39 @@ class CryptoTradingRepository(
                 val tp = entry + atr * 2.25
 
                 // Evaluate next 5 candles
-                var resultWon = false
+                var evaluated = false
+                var won = false
                 for (k in i until minOf(candles.size, i + 5)) {
                     val future = candles[k]
                     if (future.high >= tp) {
-                        resultWon = true
+                        won = true
+                        evaluated = true
                         break
                     }
                     if (future.low <= sl) {
-                        resultWon = false
+                        won = false
+                        evaluated = true
                         break
                     }
                 }
-                if (resultWon) {
-                    winTrades++
-                    totalWinsPnl += (tp - entry) / entry
+                if (evaluated) {
+                    if (won) {
+                        winTrades++
+                        totalWinsPnl += (tp - entry) / entry
+                    } else {
+                        lossTrades++
+                        totalLossPnl += abs(sl - entry) / entry
+                    }
                 } else {
-                    lossTrades++
-                    totalLossPnl += abs(sl - entry) / entry
+                    // Mark-to-market at the 5th candle close
+                    val lastFutureClose = candles[minOf(candles.size - 1, i + 4)].close
+                    if (lastFutureClose >= entry) {
+                        winTrades++
+                        totalWinsPnl += (lastFutureClose - entry) / entry
+                    } else {
+                        lossTrades++
+                        totalLossPnl += (entry - lastFutureClose) / entry
+                    }
                 }
             } else if (isBearSignal) {
                 totalTrades++
@@ -354,24 +376,39 @@ class CryptoTradingRepository(
                 val sl = entry + atr * 1.5
                 val tp = entry - atr * 2.25
 
-                var resultWon = false
+                var evaluated = false
+                var won = false
                 for (k in i until minOf(candles.size, i + 5)) {
                     val future = candles[k]
                     if (future.low <= tp) {
-                        resultWon = true
+                        won = true
+                        evaluated = true
                         break
                     }
                     if (future.high >= sl) {
-                        resultWon = false
+                        won = false
+                        evaluated = true
                         break
                     }
                 }
-                if (resultWon) {
-                    winTrades++
-                    totalWinsPnl += (entry - tp) / entry
+                if (evaluated) {
+                    if (won) {
+                        winTrades++
+                        totalWinsPnl += (entry - tp) / entry
+                    } else {
+                        lossTrades++
+                        totalLossPnl += abs(entry - sl) / entry
+                    }
                 } else {
-                    lossTrades++
-                    totalLossPnl += abs(entry - sl) / entry
+                    // Mark-to-market at the 5th candle close
+                    val lastFutureClose = candles[minOf(candles.size - 1, i + 4)].close
+                    if (lastFutureClose <= entry) {
+                        winTrades++
+                        totalWinsPnl += (entry - lastFutureClose) / entry
+                    } else {
+                        lossTrades++
+                        totalLossPnl += (lastFutureClose - entry) / entry
+                    }
                 }
             }
         }

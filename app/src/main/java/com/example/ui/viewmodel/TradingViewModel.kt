@@ -30,6 +30,14 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import com.example.domain.model.ConceptCategory
+import com.example.domain.model.CryptoGlobalStats
+import com.example.domain.model.EconomicCalendarEvent
+import com.example.domain.model.FinancialConcept
+import com.example.domain.model.MarketSentimentSummary
+import com.example.domain.model.NewsArticle
+import com.example.domain.model.NewsCategory
+import com.example.data.repository.NewsRepository
 
 data class TradingUiState(
     val currentSymbol: String = "BTCUSDT",
@@ -71,7 +79,14 @@ data class TradingUiState(
     val isGoogleSignedIn: Boolean = false,
     val isUserAdmin: Boolean = false,
     val isCloudSyncing: Boolean = false,
-    val lastCloudSyncTimestamp: Long? = null
+    val lastCloudSyncTimestamp: Long? = null,
+    // News & Market Impact + Financial Learning Center
+    val selectedNewsCategory: NewsCategory = NewsCategory.ALL,
+    val newsSearchQuery: String = "",
+    val selectedArticleDetail: NewsArticle? = null,
+    val newsActiveSection: Int = 0,
+    val selectedLearningCategory: ConceptCategory? = null,
+    val learningSearchQuery: String = ""
 )
 
 class TradingViewModel(application: Application) : AndroidViewModel(application) {
@@ -117,12 +132,22 @@ class TradingViewModel(application: Application) : AndroidViewModel(application)
     val paperTrades: StateFlow<List<PaperTradeEntity>> = repository.paperTrades
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    val newsRepository = NewsRepository()
+    val newsArticles: StateFlow<List<NewsArticle>> = newsRepository.newsArticles
+    val globalStats: StateFlow<CryptoGlobalStats?> = newsRepository.globalStats
+    val sentimentSummary: StateFlow<MarketSentimentSummary?> = newsRepository.sentimentSummary
+    val economicEvents: StateFlow<List<EconomicCalendarEvent>> = newsRepository.economicEvents
+    val isNewsLoading: StateFlow<Boolean> = newsRepository.isLoading
+
     private var tickerJob: Job? = null
 
     init {
         viewModelScope.launch {
             repository.seedDefaultWatchlistIfNeeded()
             loadCurrentPair()
+        }
+        viewModelScope.launch {
+            loadNewsData()
         }
         viewModelScope.launch {
             googleAuthManager.currentUser.collect { user ->
@@ -285,6 +310,61 @@ class TradingViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
+    // ========================================================
+    // NEWS & MARKET IMPACT + FINANCIAL LEARNING CENTER METHODS
+    // ========================================================
+
+    fun loadNewsData(forceRefresh: Boolean = false) {
+        viewModelScope.launch {
+            val btcPrice = _uiState.value.livePrices["BTCUSDT"] ?: 0.0
+            val ethPrice = _uiState.value.livePrices["ETHUSDT"] ?: 0.0
+            newsRepository.loadNewsAndMarketData(
+                category = _uiState.value.selectedNewsCategory,
+                searchQuery = _uiState.value.newsSearchQuery,
+                binanceBtcPrice = btcPrice,
+                binanceEthPrice = ethPrice,
+                forceRefresh = forceRefresh
+            )
+        }
+    }
+
+    fun selectNewsCategory(category: NewsCategory) {
+        _uiState.update { it.copy(selectedNewsCategory = category) }
+        loadNewsData()
+    }
+
+    fun updateNewsSearchQuery(query: String) {
+        _uiState.update { it.copy(newsSearchQuery = query) }
+        loadNewsData()
+    }
+
+    fun selectArticleDetail(article: NewsArticle?) {
+        _uiState.update { it.copy(selectedArticleDetail = article) }
+    }
+
+    fun selectNewsSection(section: Int) {
+        _uiState.update { it.copy(newsActiveSection = section) }
+    }
+
+    fun selectLearningCategory(category: ConceptCategory?) {
+        _uiState.update { it.copy(selectedLearningCategory = category) }
+    }
+
+    fun updateLearningSearchQuery(query: String) {
+        _uiState.update { it.copy(learningSearchQuery = query) }
+    }
+
+    fun refreshNewsData() {
+        loadNewsData(forceRefresh = true)
+    }
+
+    fun getFilteredFinancialConcepts(): List<FinancialConcept> {
+        return newsRepository.getFinancialConcepts(
+            category = _uiState.value.selectedLearningCategory,
+            searchQuery = _uiState.value.learningSearchQuery
+        )
+    }
+
     fun updateRiskSettings(balance: Double, riskPct: Double, lev: Int) {
         _uiState.value = _uiState.value.copy(
             accountBalance = balance.coerceAtLeast(10.0),
@@ -351,6 +431,7 @@ class TradingViewModel(application: Application) : AndroidViewModel(application)
                 stopLoss = plan.stopLoss,
                 tp1 = plan.tp1,
                 tp2 = plan.tp2,
+                tp3 = plan.tp3,
                 margin = margin,
                 leverage = _uiState.value.leverage
             )
@@ -445,6 +526,7 @@ class TradingViewModel(application: Application) : AndroidViewModel(application)
         val stopLoss = if (isLong) currentPrice - atr * 1.5 else currentPrice + atr * 1.5
         val tp1 = if (isLong) currentPrice + atr * 2.25 else currentPrice - atr * 2.25
         val tp2 = if (isLong) currentPrice + atr * 3.75 else currentPrice - atr * 3.75
+        val tp3 = if (isLong) currentPrice + atr * 5.0 else currentPrice - atr * 5.0
         val margin = _uiState.value.accountBalance * (_uiState.value.riskPercent / 100.0)
 
         viewModelScope.launch {
@@ -455,6 +537,7 @@ class TradingViewModel(application: Application) : AndroidViewModel(application)
                 stopLoss = stopLoss,
                 tp1 = tp1,
                 tp2 = tp2,
+                tp3 = tp3,
                 margin = margin,
                 leverage = _uiState.value.leverage
             )

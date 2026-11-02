@@ -45,6 +45,7 @@ fun IndicatorsScreen(
     indicators: TechnicalIndicators,
     timeframe: Timeframe,
     currentPrice: Double,
+    isRomanUrdu: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -55,13 +56,13 @@ fun IndicatorsScreen(
             .padding(14.dp)
     ) {
         Text(
-            text = "Technical Indicators Dashboard (${timeframe.label})",
+            text = if (isRomanUrdu) "Technical Ishare Dashboard (${timeframe.label})" else "Technical Indicators Dashboard (${timeframe.label})",
             fontSize = 17.sp,
             fontWeight = FontWeight.Bold,
             color = TextPrimary
         )
         Text(
-            text = "Real-time mathematical calculations computed directly from verified candle data.",
+            text = if (isRomanUrdu) "Verified candles se calculate shuda live mathematical indicators." else "Real-time mathematical calculations computed directly from verified candle data.",
             fontSize = 11.sp,
             color = TextMuted
         )

@@ -22,9 +22,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ShowChart
 import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.Bolt
+import androidx.compose.material.icons.filled.Newspaper
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.Speed
+import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material.icons.filled.Widgets
 import androidx.compose.material.icons.filled.WorkOutline
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -41,7 +44,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -53,16 +58,22 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ui.components.CandlestickChart
 import com.example.ui.components.TopBarHeader
+import com.example.ui.screens.AnalyticsContainerScreen
+import com.example.ui.screens.AppHubScreen
 import com.example.ui.screens.BeginnerGuideScreen
 import com.example.ui.screens.FuturesAnalyticsScreen
 import com.example.ui.screens.IndicatorsScreen
+import com.example.ui.screens.NewsAndImpactScreen
+import com.example.ui.screens.PairDetailScreen
 import com.example.ui.screens.PaperTradingScreen
 import com.example.ui.screens.PlanAndConfluenceScreen
+import com.example.ui.screens.TradesAndHubContainerScreen
 import com.example.ui.theme.AccentCyan
 import com.example.ui.theme.BearRed
 import com.example.ui.theme.BullGreen
 import com.example.ui.theme.CryptoBackground
 import com.example.ui.theme.CryptoSurface
+import com.example.ui.theme.GoldenPocketGold
 import com.example.ui.theme.SmartTradeTheme
 import com.example.ui.theme.TextMuted
 import com.example.ui.theme.TextPrimary
@@ -122,7 +133,14 @@ fun SmartTradeApp(viewModel: TradingViewModel) {
     val paperTrades by viewModel.paperTrades.collectAsState()
     val subscriptionState by viewModel.subscriptionState.collectAsState()
 
+    val newsArticles by viewModel.newsArticles.collectAsState()
+    val globalStats by viewModel.globalStats.collectAsState()
+    val sentimentSummary by viewModel.sentimentSummary.collectAsState()
+    val economicEvents by viewModel.economicEvents.collectAsState()
+    val isNewsLoading by viewModel.isNewsLoading.collectAsState()
+
     val snackbarHostState = remember { SnackbarHostState() }
+    var showGuideModal by remember { mutableStateOf(false) }
 
     LaunchedEffect(uiState.userNotification) {
         uiState.userNotification?.let { msg ->
@@ -153,7 +171,7 @@ fun SmartTradeApp(viewModel: TradingViewModel) {
                 onTimeframeSelected = { viewModel.selectTimeframe(it) },
                 onRefresh = { viewModel.refreshData() },
                 onAddWatchlist = { viewModel.addToWatchlist(it) },
-                isChartTab = uiState.selectedTab == 1
+                isChartTab = uiState.selectedTab == 2
             )
         },
         bottomBar = {
@@ -161,11 +179,12 @@ fun SmartTradeApp(viewModel: TradingViewModel) {
                 containerColor = CryptoSurface,
                 tonalElevation = 6.dp
             ) {
+                // Tab 0: Signal
                 NavigationBarItem(
                     selected = uiState.selectedTab == 0,
                     onClick = { viewModel.selectTab(0) },
-                    icon = { Icon(Icons.Default.Bolt, contentDescription = "Signal & Plan") },
-                    label = { Text(if (uiState.isRomanUrdu) "Signal" else "Signal", fontSize = 10.sp) },
+                    icon = { Icon(Icons.Default.Bolt, contentDescription = "Signal") },
+                    label = { Text("Signal", fontSize = 9.sp, maxLines = 1, softWrap = false, fontWeight = if (uiState.selectedTab == 0) FontWeight.Bold else FontWeight.Normal) },
                     colors = NavigationBarItemDefaults.colors(
                         selectedIconColor = Color.Black,
                         selectedTextColor = BullGreen,
@@ -175,11 +194,29 @@ fun SmartTradeApp(viewModel: TradingViewModel) {
                     ),
                     modifier = Modifier.testTag("tab_signal")
                 )
+
+                // Tab 1: Pair Detail (SMC & Fibonacci Retracement Tool)
                 NavigationBarItem(
                     selected = uiState.selectedTab == 1,
                     onClick = { viewModel.selectTab(1) },
-                    icon = { Icon(Icons.AutoMirrored.Filled.ShowChart, contentDescription = "Chart & SMC") },
-                    label = { Text(if (uiState.isRomanUrdu) "Chart" else "Chart", fontSize = 10.sp) },
+                    icon = { Icon(Icons.Default.Tune, contentDescription = "SMC & Fib") },
+                    label = { Text("SMC & Fib", fontSize = 9.sp, maxLines = 1, softWrap = false, fontWeight = if (uiState.selectedTab == 1) FontWeight.Bold else FontWeight.Normal) },
+                    colors = NavigationBarItemDefaults.colors(
+                        selectedIconColor = Color.Black,
+                        selectedTextColor = GoldenPocketGold,
+                        indicatorColor = GoldenPocketGold,
+                        unselectedIconColor = TextSecondary,
+                        unselectedTextColor = TextSecondary
+                    ),
+                    modifier = Modifier.testTag("tab_smc_fib")
+                )
+
+                // Tab 2: Candlestick Chart
+                NavigationBarItem(
+                    selected = uiState.selectedTab == 2,
+                    onClick = { viewModel.selectTab(2) },
+                    icon = { Icon(Icons.AutoMirrored.Filled.ShowChart, contentDescription = "Chart") },
+                    label = { Text("Chart", fontSize = 9.sp, maxLines = 1, softWrap = false, fontWeight = if (uiState.selectedTab == 2) FontWeight.Bold else FontWeight.Normal) },
                     colors = NavigationBarItemDefaults.colors(
                         selectedIconColor = Color.Black,
                         selectedTextColor = AccentCyan,
@@ -189,25 +226,13 @@ fun SmartTradeApp(viewModel: TradingViewModel) {
                     ),
                     modifier = Modifier.testTag("tab_chart")
                 )
-                NavigationBarItem(
-                    selected = uiState.selectedTab == 2,
-                    onClick = { viewModel.selectTab(2) },
-                    icon = { Icon(Icons.Default.Speed, contentDescription = "Indicators") },
-                    label = { Text(if (uiState.isRomanUrdu) "Ishare" else "Indicators", fontSize = 10.sp) },
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = Color.Black,
-                        selectedTextColor = BullGreen,
-                        indicatorColor = BullGreen,
-                        unselectedIconColor = TextSecondary,
-                        unselectedTextColor = TextSecondary
-                    ),
-                    modifier = Modifier.testTag("tab_indicators")
-                )
+
+                // Tab 3: News & Market Impact (MANDATORY DEDICATED PAGE)
                 NavigationBarItem(
                     selected = uiState.selectedTab == 3,
                     onClick = { viewModel.selectTab(3) },
-                    icon = { Icon(Icons.Default.AccountBalance, contentDescription = "Futures") },
-                    label = { Text("Futures", fontSize = 10.sp) },
+                    icon = { Icon(Icons.Default.Newspaper, contentDescription = "News") },
+                    label = { Text(if (uiState.isRomanUrdu) "Khabrain" else "News", fontSize = 9.sp, maxLines = 1, softWrap = false, fontWeight = if (uiState.selectedTab == 3) FontWeight.Bold else FontWeight.Normal) },
                     colors = NavigationBarItemDefaults.colors(
                         selectedIconColor = Color.Black,
                         selectedTextColor = AccentCyan,
@@ -215,13 +240,15 @@ fun SmartTradeApp(viewModel: TradingViewModel) {
                         unselectedIconColor = TextSecondary,
                         unselectedTextColor = TextSecondary
                     ),
-                    modifier = Modifier.testTag("tab_futures")
+                    modifier = Modifier.testTag("tab_news")
                 )
+
+                // Tab 4: Analytics (Indicators & Futures)
                 NavigationBarItem(
                     selected = uiState.selectedTab == 4,
                     onClick = { viewModel.selectTab(4) },
-                    icon = { Icon(Icons.Default.WorkOutline, contentDescription = "Paper Trading") },
-                    label = { Text(if (uiState.isRomanUrdu) "Trades" else "Paper", fontSize = 10.sp) },
+                    icon = { Icon(Icons.Default.Speed, contentDescription = "Analytics") },
+                    label = { Text(if (uiState.isRomanUrdu) "Ishare" else "Analytics", fontSize = 9.sp, maxLines = 1, softWrap = false, fontWeight = if (uiState.selectedTab == 4) FontWeight.Bold else FontWeight.Normal) },
                     colors = NavigationBarItemDefaults.colors(
                         selectedIconColor = Color.Black,
                         selectedTextColor = BullGreen,
@@ -229,21 +256,23 @@ fun SmartTradeApp(viewModel: TradingViewModel) {
                         unselectedIconColor = TextSecondary,
                         unselectedTextColor = TextSecondary
                     ),
-                    modifier = Modifier.testTag("tab_paper")
+                    modifier = Modifier.testTag("tab_analytics")
                 )
+
+                // Tab 5: Trades & Hub (Paper Trades, Backtest, VIP Codes, Admin, WhatsApp, Settings)
                 NavigationBarItem(
                     selected = uiState.selectedTab == 5,
                     onClick = { viewModel.selectTab(5) },
-                    icon = { Icon(Icons.Default.School, contentDescription = "Trader Guide") },
-                    label = { Text(if (uiState.isRomanUrdu) "Guide" else "Guide", fontSize = 10.sp) },
+                    icon = { Icon(Icons.Default.Widgets, contentDescription = "Trades & Hub") },
+                    label = { Text("Hub", fontSize = 9.sp, maxLines = 1, softWrap = false, fontWeight = if (uiState.selectedTab == 5) FontWeight.Bold else FontWeight.Normal) },
                     colors = NavigationBarItemDefaults.colors(
                         selectedIconColor = Color.Black,
-                        selectedTextColor = AccentCyan,
-                        indicatorColor = AccentCyan,
+                        selectedTextColor = GoldenPocketGold,
+                        indicatorColor = GoldenPocketGold,
                         unselectedIconColor = TextSecondary,
                         unselectedTextColor = TextSecondary
                     ),
-                    modifier = Modifier.testTag("tab_guide")
+                    modifier = Modifier.testTag("tab_trades_hub")
                 )
             }
         }
@@ -270,9 +299,22 @@ fun SmartTradeApp(viewModel: TradingViewModel) {
                         onOpenSubscription = { viewModel.openSubscriptionModal(true) },
                         onUpdateRisk = { b, r, l -> viewModel.updateRiskSettings(b, r, l) },
                         onExecutePaperTrade = { viewModel.executePaperTrade() },
-                        onSaveSignal = { viewModel.saveCurrentSignal() }
+                        onSaveSignal = { viewModel.saveCurrentSignal() },
+                        onNavigateToSmcDetail = { viewModel.selectTab(1) }
                     )
-                    1 -> CandlestickChart(
+                    1 -> PairDetailScreen(
+                        symbol = uiState.currentSymbol,
+                        timeframe = uiState.selectedTimeframe,
+                        currentPrice = livePrice,
+                        stats = analysis.futuresStats,
+                        smc = analysis.smc,
+                        fibonacci = analysis.fibonacci,
+                        isRomanUrdu = uiState.isRomanUrdu,
+                        onNavigateToChart = { viewModel.selectTab(2) },
+                        onNavigateToSignal = { viewModel.selectTab(0) },
+                        onExecuteInstantTrade = { isLong -> viewModel.openPaperTradeInstant(isLong) }
+                    )
+                    2 -> CandlestickChart(
                         candles = analysis.candles,
                         indicators = analysis.indicators,
                         smc = analysis.smc,
@@ -292,19 +334,41 @@ fun SmartTradeApp(viewModel: TradingViewModel) {
                         onOpenInstantTrade = { isLong -> viewModel.openPaperTradeInstant(isLong) },
                         onCloseTrade = { trade -> viewModel.closePaperTrade(trade) }
                     )
-                    2 -> IndicatorsScreen(
-                        indicators = analysis.indicators,
-                        timeframe = uiState.selectedTimeframe,
-                        currentPrice = livePrice
+                    3 -> NewsAndImpactScreen(
+                        articles = newsArticles,
+                        globalStats = globalStats,
+                        sentimentSummary = sentimentSummary,
+                        economicEvents = economicEvents,
+                        financialConcepts = viewModel.getFilteredFinancialConcepts(),
+                        selectedCategory = uiState.selectedNewsCategory,
+                        searchQuery = uiState.newsSearchQuery,
+                        selectedArticleDetail = uiState.selectedArticleDetail,
+                        activeSection = uiState.newsActiveSection,
+                        selectedLearningCategory = uiState.selectedLearningCategory,
+                        learningSearchQuery = uiState.learningSearchQuery,
+                        isLoading = isNewsLoading,
+                        isPaidUser = subscriptionState.isPrivilegedActive || uiState.isUserAdmin,
+                        isRomanUrdu = uiState.isRomanUrdu,
+                        onSelectCategory = { viewModel.selectNewsCategory(it) },
+                        onUpdateSearchQuery = { viewModel.updateNewsSearchQuery(it) },
+                        onSelectArticleDetail = { viewModel.selectArticleDetail(it) },
+                        onSelectSection = { viewModel.selectNewsSection(it) },
+                        onSelectLearningCategory = { viewModel.selectLearningCategory(it) },
+                        onUpdateLearningSearch = { viewModel.updateLearningSearchQuery(it) },
+                        onRefresh = { viewModel.refreshNewsData() },
+                        onOpenSubscription = { viewModel.openSubscriptionModal(true) }
                     )
-                    3 -> FuturesAnalyticsScreen(
+                    4 -> AnalyticsContainerScreen(
+                        indicators = analysis.indicators,
                         stats = analysis.futuresStats,
                         smc = analysis.smc,
+                        timeframe = uiState.selectedTimeframe,
                         currentPrice = livePrice,
+                        isRomanUrdu = uiState.isRomanUrdu,
                         hasFuturesAccess = subscriptionState.hasAccessTo(com.example.domain.model.AppFeature.FUTURES_ANALYTICS_OVERVIEW, uiState.isUserAdmin),
                         onOpenSubscription = { viewModel.openSubscriptionModal(true) }
                     )
-                    4 -> PaperTradingScreen(
+                    5 -> TradesAndHubContainerScreen(
                         paperTrades = paperTrades,
                         savedSignals = savedSignals,
                         accountBalance = uiState.accountBalance,
@@ -312,20 +376,23 @@ fun SmartTradeApp(viewModel: TradingViewModel) {
                         livePrices = uiState.livePrices,
                         currentSymbol = uiState.currentSymbol,
                         backtestSummary = uiState.backtestSummary,
+                        subscriptionState = subscriptionState,
+                        developerName = uiState.developerName,
+                        developerWhatsapp = uiState.developerWhatsapp,
+                        isRomanUrdu = uiState.isRomanUrdu,
                         onCloseTrade = { viewModel.closePaperTrade(it) },
                         onDeleteTrade = { viewModel.deletePaperTrade(it) },
                         onDeleteSignal = { viewModel.deleteSavedSignal(it) },
                         onRunBacktest = { viewModel.runBacktest() },
-                        onRefresh = { viewModel.refreshData() }
-                    )
-                    5 -> BeginnerGuideScreen(
-                        isRomanUrdu = uiState.isRomanUrdu,
-                        isAdmin = uiState.isUserAdmin,
+                        onRefresh = { viewModel.refreshData() },
+                        onOpenGuide = { showGuideModal = true },
                         onOpenSubscription = { viewModel.openSubscriptionModal(true) },
-                        onOpenInfluencerPortal = { viewModel.openInfluencerModal(true) },
                         onOpenAdminPortal = { viewModel.openAdminModal(true) },
+                        onOpenInfluencerPortal = { viewModel.openInfluencerModal(true) },
+                        onOpenAbout = { viewModel.openAboutModal(true) },
                         onOpenLegal = { viewModel.openLegalModal(it) },
-                        onOpenAbout = { viewModel.openAboutModal(true) }
+                        onToggleLanguage = { viewModel.toggleLanguage() },
+                        onRedeemCode = { viewModel.redeemActivationCode(it) }
                     )
                 }
             } else {
@@ -436,6 +503,34 @@ fun SmartTradeApp(viewModel: TradingViewModel) {
                     onClose = { viewModel.closeLegalModal() },
                     onAcceptConsent = { viewModel.acceptLegalConsent() }
                 )
+            } else if (showGuideModal) {
+                BackHandler { showGuideModal = false }
+                com.example.ui.screens.BeginnerGuideScreen(
+                    isRomanUrdu = uiState.isRomanUrdu,
+                    isAdmin = uiState.isUserAdmin,
+                    onOpenSubscription = {
+                        showGuideModal = false
+                        viewModel.openSubscriptionModal(true)
+                    },
+                    onOpenInfluencerPortal = {
+                        showGuideModal = false
+                        viewModel.openInfluencerModal(true)
+                    },
+                    onOpenAdminPortal = {
+                        showGuideModal = false
+                        viewModel.openAdminModal(true)
+                    },
+                    onOpenLegal = {
+                        showGuideModal = false
+                        viewModel.openLegalModal(it)
+                    },
+                    onOpenAbout = {
+                        showGuideModal = false
+                        viewModel.openAboutModal(true)
+                    }
+                )
+            } else if (uiState.selectedArticleDetail != null) {
+                BackHandler { viewModel.selectArticleDetail(null) }
             } else if (uiState.selectedTab != 0) {
                 BackHandler { viewModel.selectTab(0) }
             }
