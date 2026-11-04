@@ -108,13 +108,13 @@ fun AppHubScreen(
         ) {
             Column {
                 Text(
-                    text = if (isRomanUrdu) "Smart Trade Markaz (Hub)" else "Smart Trade Hub & Menu",
+                    text = if (isRomanUrdu) "اسمارٹ ٹریڈ ہب اور مینو" else "Smart Trade Hub & Menu",
                     fontSize = 18.sp,
                     fontWeight = FontWeight.ExtraBold,
                     color = TextPrimary
                 )
                 Text(
-                    text = if (isRomanUrdu) "Tamam tools, VIP plans, guide aur admin ek jagah" else "All tools, VIP plans, guides, and admin in one place",
+                    text = if (isRomanUrdu) "تمام ٹولز، وی آئی پی پلانز، گائیڈ اور ایڈمن ایک جگہ" else "All tools, VIP plans, guides, and admin in one place",
                     fontSize = 11.sp,
                     color = TextMuted
                 )
@@ -142,7 +142,7 @@ fun AppHubScreen(
                         modifier = Modifier.size(14.dp)
                     )
                     Text(
-                        text = if (isRomanUrdu) "اردو (Roman)" else "English",
+                        text = if (isRomanUrdu) "اردو" else "English",
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
                         color = TextPrimary
@@ -184,14 +184,14 @@ fun AppHubScreen(
                         }
                         Column {
                             Text(
-                                text = if (isRomanUrdu) "VIP Plan & Code Activation" else "VIP Plan & Activation Code",
+                                text = if (isRomanUrdu) "وی آئی پی پلان اور کوڈ ایکٹیویشن" else "VIP Plan & Activation Code",
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = TextPrimary
                             )
                             val planName = subscriptionState.currentPlan.title
                             Text(
-                                text = "${if (isRomanUrdu) "Mojooda Plan: " else "Current Plan: "} $planName",
+                                text = "${if (isRomanUrdu) "موجودہ پلان: " else "Current Plan: "} $planName",
                                 fontSize = 11.sp,
                                 color = if (subscriptionState.isPrivilegedActive) BullGreen else AccentCyan,
                                 fontWeight = FontWeight.Medium
@@ -207,7 +207,7 @@ fun AppHubScreen(
                         modifier = Modifier.testTag("hub_btn_view_plans")
                     ) {
                         Text(
-                            text = if (isRomanUrdu) "Plans" else "Plans",
+                            text = if (isRomanUrdu) "پلانز" else "Plans",
                             color = Color.Black,
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold
@@ -259,7 +259,7 @@ fun AppHubScreen(
                         modifier = Modifier.testTag("hub_btn_redeem")
                     ) {
                         Text(
-                            text = if (isRomanUrdu) "Fa'al" else "Redeem",
+                            text = if (isRomanUrdu) "فعال کریں" else "Redeem",
                             color = Color.Black,
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold
@@ -269,10 +269,10 @@ fun AppHubScreen(
             }
         }
 
-        // 2. Admin Console Card (Single Tap, Password Sarfrazg1.)
+        // 2. Admin Console Card (Secure Admin Access – Password Never Displayed)
         HubActionCard(
-            title = if (isRomanUrdu) "Admin Console (Control Panel)" else "Admin Console & Code Manager",
-            subtitle = if (isRomanUrdu) "Password Sarfrazg1. se Firebase Activation Codes manage karein" else "Direct Firebase codes manager with password Sarfrazg1.",
+            title = if (isRomanUrdu) "ایڈمن کنسول اور کوڈ منیجر" else "Admin Console & Code Manager",
+            subtitle = if (isRomanUrdu) "محفوظ ایڈمن رسائی – صرف مجاز ایڈمن کے لیے" else "Secure Admin Access – Authorized Admin Only",
             icon = Icons.Default.AdminPanelSettings,
             iconTint = BullGreen,
             onClick = onOpenAdminPortal,
@@ -281,8 +281,8 @@ fun AppHubScreen(
 
         // 3. Trader Guide & SMC Tutorial Card
         HubActionCard(
-            title = if (isRomanUrdu) "Trader Guide & SMC Sabaq" else "Trader Guide & SMC Tutorials",
-            subtitle = if (isRomanUrdu) "Order Blocks, BOS, CHoCH aur Fibo seekhein" else "Learn Order Blocks, BOS, Golden Pocket, and risk management",
+            title = if (isRomanUrdu) "ٹریڈر گائیڈ اور ایس ایم سی ٹیوٹوریلز" else "Trader Guide & SMC Tutorials",
+            subtitle = if (isRomanUrdu) "آرڈر بلاکس، بی او ایس، گولڈن پاکٹ اور رسک مینجمنٹ سیکھیں" else "Learn Order Blocks, BOS, Golden Pocket, and risk management",
             icon = Icons.Default.School,
             iconTint = AccentCyan,
             onClick = onOpenGuide,
@@ -291,7 +291,7 @@ fun AppHubScreen(
 
         // 4. WhatsApp Direct Support Card
         HubActionCard(
-            title = if (isRomanUrdu) "Developer WhatsApp Raabta" else "Developer WhatsApp Direct Support",
+            title = if (isRomanUrdu) "ڈیولپر واٹس ایپ براہ راست رابطہ" else "Developer WhatsApp Direct Support",
             subtitle = "$developerName ($developerWhatsapp)",
             icon = Icons.Default.Chat,
             iconTint = BullGreen,
@@ -307,8 +307,8 @@ fun AppHubScreen(
 
         // 5. Influencer & Referral Dashboard Card
         HubActionCard(
-            title = if (isRomanUrdu) "Influencer & Referral Dashboard" else "Influencer & Referral Rewards",
-            subtitle = if (isRomanUrdu) "Doston ko invite karein aur free VIP access hasil karein" else "Share your referral code and unlock VIP privileges",
+            title = if (isRomanUrdu) "انفلوئنسر اور ریفرل انعامات" else "Influencer & Referral Rewards",
+            subtitle = if (isRomanUrdu) "اپنا ریفرل کوڈ شیئر کریں اور وی آئی پی سہولیات حاصل کریں" else "Share your referral code and unlock VIP privileges",
             icon = Icons.Default.Share,
             iconTint = WarningAmber,
             onClick = onOpenInfluencerPortal,
@@ -317,8 +317,8 @@ fun AppHubScreen(
 
         // 6. About Developer & System Info Card
         HubActionCard(
-            title = if (isRomanUrdu) "Smart Trade AI k Baray Me" else "About Smart Trade AI & Version",
-            subtitle = if (isRomanUrdu) "System details, security aur disclaimer" else "Architecture, version, developer info, and legal disclaimer",
+            title = if (isRomanUrdu) "اسمارٹ ٹریڈ اے آئی اور ورژن" else "About Smart Trade AI & Version",
+            subtitle = if (isRomanUrdu) "سسٹم، ورژن، ڈیولپر معلومات اور قانونی وضاحت" else "Architecture, version, developer info, and legal disclaimer",
             icon = Icons.Default.Info,
             iconTint = TextSecondary,
             onClick = onOpenAbout,
@@ -337,7 +337,7 @@ fun AppHubScreen(
                 modifier = Modifier.weight(1f)
             ) {
                 Text(
-                    text = if (isRomanUrdu) "Risk Warning" else "Risk Disclaimer",
+                    text = if (isRomanUrdu) "خطرات کا ڈس کلیمر" else "Risk Disclaimer",
                     fontSize = 10.sp,
                     color = WarningAmber
                 )
@@ -350,7 +350,7 @@ fun AppHubScreen(
                 modifier = Modifier.weight(1f)
             ) {
                 Text(
-                    text = if (isRomanUrdu) "Sharait (Terms)" else "Terms of Service",
+                    text = if (isRomanUrdu) "شرائط و ضوابط" else "Terms of Service",
                     fontSize = 10.sp,
                     color = TextSecondary
                 )
@@ -363,7 +363,7 @@ fun AppHubScreen(
                 modifier = Modifier.weight(1f)
             ) {
                 Text(
-                    text = if (isRomanUrdu) "Privacy" else "Privacy Policy",
+                    text = if (isRomanUrdu) "پرائیویسی پالیسی" else "Privacy Policy",
                     fontSize = 10.sp,
                     color = TextSecondary
                 )

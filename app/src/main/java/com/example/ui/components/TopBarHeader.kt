@@ -1,6 +1,7 @@
 package com.example.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -51,6 +52,7 @@ import com.example.ui.theme.BullGreen
 import com.example.ui.theme.CryptoCardBorder
 import com.example.ui.theme.CryptoSurface
 import com.example.ui.theme.CryptoSurfaceVariant
+import com.example.ui.theme.GoldenPocketGold
 import com.example.ui.theme.TextMuted
 import com.example.ui.theme.TextPrimary
 import com.example.ui.theme.TextSecondary
@@ -177,19 +179,45 @@ fun TopBarHeader(
 
                     // Far Right: Lang + Refresh
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
+                        // Dual Language Selector: ENG | اردو
+                        Row(
                             modifier = Modifier
-                                .clip(RoundedCornerShape(10.dp))
+                                .clip(RoundedCornerShape(8.dp))
                                 .background(CryptoSurfaceVariant)
-                                .clickable { onToggleLanguage() }
-                                .padding(horizontal = 6.dp, vertical = 3.dp)
+                                .border(0.5.dp, CryptoCardBorder, RoundedCornerShape(8.dp))
+                                .padding(1.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(
-                                text = if (isRomanUrdu) "اردو" else "ENG",
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = if (isRomanUrdu) BullGreen else AccentCyan
-                            )
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(if (!isRomanUrdu) GoldenPocketGold else Color.Transparent)
+                                    .clickable { if (isRomanUrdu) onToggleLanguage() }
+                                    .padding(horizontal = 5.dp, vertical = 2.dp)
+                                    .testTag("chart_lang_eng")
+                            ) {
+                                Text(
+                                    text = "ENG",
+                                    fontSize = 9.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (!isRomanUrdu) Color.Black else TextSecondary
+                                )
+                            }
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(if (isRomanUrdu) GoldenPocketGold else Color.Transparent)
+                                    .clickable { if (!isRomanUrdu) onToggleLanguage() }
+                                    .padding(horizontal = 5.dp, vertical = 2.dp)
+                                    .testTag("chart_lang_urdu")
+                            ) {
+                                Text(
+                                    text = "اردو",
+                                    fontSize = 9.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (isRomanUrdu) Color.Black else TextSecondary
+                                )
+                            }
                         }
                         Spacer(modifier = Modifier.width(4.dp))
                         IconButton(
@@ -366,7 +394,7 @@ fun TopBarHeader(
                                 .padding(horizontal = 6.dp, vertical = 2.dp)
                         ) {
                             Text(
-                                text = "ⓘ About",
+                                text = if (isRomanUrdu) "ⓘ معلومات" else "ⓘ About",
                                 fontSize = 9.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 color = TextSecondary
@@ -375,19 +403,45 @@ fun TopBarHeader(
                     }
 
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
+                        // Dual Language Selector: ENG | اردو
+                        Row(
                             modifier = Modifier
-                                .clip(RoundedCornerShape(12.dp))
+                                .clip(RoundedCornerShape(10.dp))
                                 .background(CryptoSurfaceVariant)
-                                .clickable { onToggleLanguage() }
-                                .padding(horizontal = 6.dp, vertical = 3.dp)
+                                .border(0.5.dp, CryptoCardBorder, RoundedCornerShape(10.dp))
+                                .padding(2.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(
-                                text = if (isRomanUrdu) "اردو" else "ENG",
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = if (isRomanUrdu) BullGreen else AccentCyan
-                            )
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(if (!isRomanUrdu) GoldenPocketGold else Color.Transparent)
+                                    .clickable { if (isRomanUrdu) onToggleLanguage() }
+                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                                    .testTag("topbar_lang_eng")
+                            ) {
+                                Text(
+                                    text = "ENG",
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (!isRomanUrdu) Color.Black else TextSecondary
+                                )
+                            }
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(if (isRomanUrdu) GoldenPocketGold else Color.Transparent)
+                                    .clickable { if (!isRomanUrdu) onToggleLanguage() }
+                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                                    .testTag("topbar_lang_urdu")
+                            ) {
+                                Text(
+                                    text = "اردو",
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (isRomanUrdu) Color.Black else TextSecondary
+                                )
+                            }
                         }
 
                         Spacer(modifier = Modifier.width(4.dp))
@@ -556,7 +610,7 @@ fun TopBarHeader(
                                         modifier = Modifier.size(11.dp)
                                     )
                                     Spacer(modifier = Modifier.width(2.dp))
-                                    Text(text = "Add", fontSize = 10.sp, color = AccentCyan)
+                                    Text(text = if (isRomanUrdu) "شامل کریں" else "Add", fontSize = 10.sp, color = AccentCyan)
                                 }
                             }
                         }
@@ -570,11 +624,11 @@ fun TopBarHeader(
     if (showPairDialog) {
         AlertDialog(
             onDismissRequest = { showPairDialog = false },
-            title = { Text("Select Cryptocurrency Pair", color = TextPrimary, fontSize = 18.sp) },
+            title = { Text(if (isRomanUrdu) "کرپٹو کرنسی پیئر منتخب کریں" else "Select Cryptocurrency Pair", color = TextPrimary, fontSize = 18.sp) },
             text = {
                 Column {
                     Text(
-                        "Search or enter any USDT perpetual contract:",
+                        if (isRomanUrdu) "تلاش کریں یا کوئی بھی USDT پیئر درج کریں:" else "Search or enter any USDT perpetual contract:",
                         color = TextSecondary,
                         fontSize = 13.sp
                     )
@@ -587,7 +641,7 @@ fun TopBarHeader(
                         modifier = Modifier.fillMaxWidth()
                     )
                     Spacer(modifier = Modifier.height(12.dp))
-                    Text("Popular Pairs:", color = TextSecondary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Text(if (isRomanUrdu) "مشہور پیئرز:" else "Popular Pairs:", color = TextSecondary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     Spacer(modifier = Modifier.height(6.dp))
                     val popular = listOf("BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "DOGEUSDT", "XRPUSDT", "AVAXUSDT", "LINKUSDT", "ADAUSDT", "NEARUSDT")
                     Row(
@@ -620,12 +674,12 @@ fun TopBarHeader(
                         showPairDialog = false
                     }
                 ) {
-                    Text("Select Pair")
+                    Text(if (isRomanUrdu) "پیئر منتخب کریں" else "Select Pair")
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showPairDialog = false }) {
-                    Text("Cancel", color = TextSecondary)
+                    Text(if (isRomanUrdu) "منسوخ کریں" else "Cancel", color = TextSecondary)
                 }
             },
             containerColor = CryptoSurface

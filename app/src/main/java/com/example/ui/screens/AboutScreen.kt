@@ -100,7 +100,7 @@ fun AboutScreen(
             }
             Spacer(modifier = Modifier.width(6.dp))
             Text(
-                text = if (isRomanUrdu) "Smart Trade AI k Bare Me" else "About Smart Trade AI",
+                text = if (isRomanUrdu) "اسمارٹ ٹریڈ اے آئی کے بارے میں" else "About Smart Trade AI",
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold,
                 color = TextPrimary
@@ -155,7 +155,7 @@ fun AboutScreen(
 
                 Text(
                     text = if (isRomanUrdu) {
-                        "Smart Trade AI crypto futures aur spot markets k liye Smart Money Concepts (SMC), confluence rules aur automated technical analysis faraham karta hai."
+                        "اسمارٹ ٹریڈ اے آئی کرپٹو فیوچرز اور اسپاٹ مارکیٹس کے لیے اسمارٹ منی کنسیپٹس (SMC)، کنفلوئنس کے اصول اور خودکار تکنیکی تجزیات فراہم کرتا ہے۔"
                     } else {
                         "Smart Trade AI is a high-precision cryptocurrency market analysis engine designed to evaluate Smart Money Concepts (SMC), multi-timeframe confluence, and risk-managed trading setups."
                     },
@@ -179,17 +179,17 @@ fun AboutScreen(
             Column(modifier = Modifier.padding(vertical = 4.dp)) {
                 AboutMenuItem(
                     icon = Icons.Default.Info,
-                    label = if (isRomanUrdu) "★ Subscription Plans" else "★ Subscription Plans & Pricing",
+                    label = if (isRomanUrdu) "★ سبسکرپشن پلانز اور فیس" else "★ Subscription Plans & Pricing",
                     onClick = onOpenSubscription
                 )
                 AboutMenuItem(
                     icon = Icons.Default.Shield,
-                    label = if (isRomanUrdu) "📜 Risk Disclaimer" else "📜 Legal & Risk Disclaimer",
+                    label = if (isRomanUrdu) "📜 خطرات کا قانونی ڈس کلیمر" else "📜 Legal & Risk Disclaimer",
                     onClick = { onOpenLegal("DISCLAIMER") }
                 )
                 AboutMenuItem(
                     icon = Icons.Default.Shield,
-                    label = if (isRomanUrdu) "📋 Terms of Service" else "📋 Terms of Service",
+                    label = if (isRomanUrdu) "📋 شرائط و ضوابط" else "📋 Terms of Service",
                     onClick = { onOpenLegal("TERMS") }
                 )
             }
@@ -212,7 +212,7 @@ fun AboutScreen(
                 ) {
                     Column {
                         Text(
-                            text = "Developer: $developerName",
+                            text = if (isRomanUrdu) "ڈیولپر: $developerName" else "Developer: $developerName",
                             fontSize = 12.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = TextPrimary
@@ -244,7 +244,7 @@ fun AboutScreen(
                         val clean = developerWhatsapp.replace(Regex("[^0-9]"), "")
                         val targetNumber = if (clean.isNotEmpty()) clean else "923360074976"
                         val greeting = if (isRomanUrdu) {
-                            "Assalam-o-Alaikum%20Rao%20Sarfraz%2C%20Smart%20Trade%20AI%20app%20support%20k%20bare%20me%20rabta%20kiya%20hai"
+                            "السلام%20علیکم%20راؤ%20سرفراز%D8%8C%20اسمارٹ%20ٹریڈ%20اے%20آئی%20ایپ%20سپورٹ%20کے%20متعلق%20رابطہ%20کیا%20ہے"
                         } else {
                             "Hello%20Rao%20Muhammad%20Sarfraz%2C%20I%20am%20using%20Smart%20Trade%20AI%20app"
                         }
@@ -267,7 +267,7 @@ fun AboutScreen(
                     Icon(imageVector = Icons.Default.Phone, contentDescription = null, modifier = Modifier.size(15.dp))
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = "Chat on WhatsApp ($developerWhatsapp)",
+                        text = if (isRomanUrdu) "واٹس ایپ پر رابطہ کریں ($developerWhatsapp)" else "Chat on WhatsApp ($developerWhatsapp)",
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -283,7 +283,7 @@ fun AboutScreen(
             horizontalArrangement = Arrangement.Center
         ) {
             Text(
-                text = "⚙ System Access (Admin Portal)",
+                text = if (isRomanUrdu) "⚙ سسٹم ایڈمن رسائی پورٹل" else "⚙ System Access (Admin Portal)",
                 fontSize = 10.sp,
                 color = TextMuted,
                 modifier = Modifier

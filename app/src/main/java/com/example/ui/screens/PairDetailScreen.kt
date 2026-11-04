@@ -301,12 +301,12 @@ fun PairDetailScreen(
                         color = BullGreen
                     )
                     TelemetryStat(
-                        label = if (isRomanUrdu) "24h Kam (Low)" else "24h Low",
+                        label = if (isRomanUrdu) "24 گھنٹے کی کم ترین" else "24h Low",
                         value = if (stats != null) formatPrice(stats.low24h) else formatPrice(swingLow),
                         color = BearRed
                     )
                     TelemetryStat(
-                        label = if (isRomanUrdu) "24h Hajam (Vol)" else "24h Volume",
+                        label = if (isRomanUrdu) "24 گھنٹے کا حجم" else "24h Volume",
                         value = if (stats != null) formatVolume(stats.volume24h) else "--",
                         color = AccentCyan
                     )
@@ -321,7 +321,7 @@ fun PairDetailScreen(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Text(
-                            text = if (isRomanUrdu) "Discount Zone (Sasta - Khareedari)" else "Discount Zone (<50%)",
+                            text = if (isRomanUrdu) "ڈسکاؤنٹ زون (سستی خریداری)" else "Discount Zone (<50%)",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = BullGreen
@@ -332,7 +332,7 @@ fun PairDetailScreen(
                             color = TextMuted
                         )
                         Text(
-                            text = if (isRomanUrdu) "Premium Zone (Mehenga - Farokht)" else "Premium Zone (>50%)",
+                            text = if (isRomanUrdu) "پریمیم زون (مہنگی فروخت)" else "Premium Zone (>50%)",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = BearRed
@@ -383,10 +383,10 @@ fun PairDetailScreen(
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = if (isDiscountZone) {
-                            if (isRomanUrdu) "Qeemat Discount Zone me hai (~${String.format(Locale.US, "%.0f", rangePercent * 100)}%). Long entries ke liye mozoon hai."
+                            if (isRomanUrdu) "قیمت ڈسکاؤنٹ زون میں ہے (~${String.format(Locale.US, "%.0f", rangePercent * 100)}%)۔ لانگ انٹریز کے لیے موزوں ہے۔"
                             else "Price is currently in the Discount Zone (~${String.format(Locale.US, "%.0f", rangePercent * 100)}%). Smart money favors dip buying."
                         } else {
-                            if (isRomanUrdu) "Qeemat Premium Zone me hai (~${String.format(Locale.US, "%.0f", rangePercent * 100)}%). Short entries ya TP lene ka time hai."
+                            if (isRomanUrdu) "قیمت پریمیم زون میں ہے (~${String.format(Locale.US, "%.0f", rangePercent * 100)}%)۔ شارٹ انٹریز یا منافع بک کرنے کا وقت ہے۔"
                             else "Price is currently in the Premium Zone (~${String.format(Locale.US, "%.0f", rangePercent * 100)}%). Smart money favors selling rallies."
                         },
                         fontSize = 11.sp,
@@ -431,13 +431,13 @@ fun PairDetailScreen(
                         Spacer(modifier = Modifier.width(8.dp))
                         Column {
                             Text(
-                                text = if (isRomanUrdu) "Fibonacci Retracement Tool" else "Fibonacci Retracement Tool",
+                                text = if (isRomanUrdu) "فبوناکی ریٹریسمنٹ ٹول" else "Fibonacci Retracement Tool",
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = TextPrimary
                             )
                             Text(
-                                text = if (isRomanUrdu) "Swing High / Low daal kar Golden Pocket check karein" else "Custom Swing High/Low & Golden Pocket Ladder",
+                                text = if (isRomanUrdu) "سوئنگ ہائی اور لو درج کر کے گولڈن پاکٹ چیک کریں" else "Custom Swing High/Low & Golden Pocket Ladder",
                                 fontSize = 11.sp,
                                 color = TextMuted
                             )
@@ -454,7 +454,7 @@ fun PairDetailScreen(
                             isBullishSwing = fibonacci?.isUptrendSwing ?: true
                             Toast.makeText(
                                 context,
-                                if (isRomanUrdu) "Chart ke High/Low khudkar bhar gaye!" else "Auto-filled chart swing points!",
+                                if (isRomanUrdu) "چارٹ کے ہائی / لو خودکار بھر گئے!" else "Auto-filled chart swing points!",
                                 Toast.LENGTH_SHORT
                             ).show()
                         },
@@ -466,7 +466,7 @@ fun PairDetailScreen(
                         Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(14.dp))
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
-                            text = if (isRomanUrdu) "Auto Bharo" else "Auto Detect",
+                            text = if (isRomanUrdu) "خودکار پتہ لگائیں" else "Auto Detect",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold
                         )
@@ -483,7 +483,7 @@ fun PairDetailScreen(
                     OutlinedTextField(
                         value = customHighText,
                         onValueChange = { customHighText = it },
-                        label = { Text(if (isRomanUrdu) "Swing High ($)" else "Swing High ($)", fontSize = 11.sp) },
+                        label = { Text(if (isRomanUrdu) "سوئنگ ہائی ($)" else "Swing High ($)", fontSize = 11.sp) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         singleLine = true,
                         colors = OutlinedTextFieldDefaults.colors(
@@ -502,7 +502,7 @@ fun PairDetailScreen(
                     OutlinedTextField(
                         value = customLowText,
                         onValueChange = { customLowText = it },
-                        label = { Text(if (isRomanUrdu) "Swing Low ($)" else "Swing Low ($)", fontSize = 11.sp) },
+                        label = { Text(if (isRomanUrdu) "سوئنگ لو ($)" else "Swing Low ($)", fontSize = 11.sp) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         singleLine = true,
                         colors = OutlinedTextFieldDefaults.colors(
@@ -531,7 +531,7 @@ fun PairDetailScreen(
                         onClick = { isBullishSwing = true },
                         label = {
                             Text(
-                                text = if (isRomanUrdu) "Bullish Swing (Dip Buy)" else "Bullish Retracement",
+                                text = if (isRomanUrdu) "بلش ریٹریسمنٹ (ڈپ خریدیں)" else "Bullish Retracement",
                                 fontSize = 12.sp,
                                 fontWeight = if (isBullishSwing) FontWeight.Bold else FontWeight.Normal
                             )
@@ -550,7 +550,7 @@ fun PairDetailScreen(
                         onClick = { isBullishSwing = false },
                         label = {
                             Text(
-                                text = if (isRomanUrdu) "Bearish Swing (Rally Short)" else "Bearish Retracement",
+                                text = if (isRomanUrdu) "بیرش ریٹریسمنٹ (ریلی بیچیں)" else "Bearish Retracement",
                                 fontSize = 12.sp,
                                 fontWeight = if (!isBullishSwing) FontWeight.Bold else FontWeight.Normal
                             )
@@ -595,7 +595,7 @@ fun PairDetailScreen(
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Text(
-                                    text = if (isRomanUrdu) "SONE KI POCKET (0.618 - 0.650)" else "GOLDEN POCKET (0.618 - 0.650)",
+                                    text = if (isRomanUrdu) "گولڈن پاکٹ (0.618 - 0.650)" else "GOLDEN POCKET (0.618 - 0.650)",
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = GoldenPocketGold
@@ -618,9 +618,9 @@ fun PairDetailScreen(
                         ) {
                             Text(
                                 text = if (isInGp) {
-                                    if (isRomanUrdu) "QEEMAT ANDAR HAI!" else "PRICE IN POCKET!"
+                                    if (isRomanUrdu) "قیمت پاکٹ میں ہے!" else "PRICE IN POCKET!"
                                 } else {
-                                    if (isRomanUrdu) "KHAAS REVERSAL ZONE" else "KEY REVERSAL ZONE"
+                                    if (isRomanUrdu) "اہم ریورسل زون" else "KEY REVERSAL ZONE"
                                 },
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold,
@@ -634,7 +634,7 @@ fun PairDetailScreen(
 
                 // Complete Fibonacci Ladder Table
                 Text(
-                    text = if (isRomanUrdu) "Mukammal Fibonacci Ladder Darja-ba-Darja" else "Fibonacci Levels & Price Distance Ladder",
+                    text = if (isRomanUrdu) "مکمل فبوناکی لیڈر اور فاصلہ" else "Fibonacci Levels & Price Distance Ladder",
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Bold,
                     color = TextPrimary
@@ -658,7 +658,7 @@ fun PairDetailScreen(
                                 clipboardManager.setText(AnnotatedString(level.price.toString()))
                                 Toast.makeText(
                                     context,
-                                    if (isRomanUrdu) "Level ${level.label} ($${formatPrice(level.price)}) copy ho gaya!" else "Copied ${level.label}: $${formatPrice(level.price)}",
+                                    if (isRomanUrdu) "لیول ${level.label} ($${formatPrice(level.price)}) کاپی ہو گیا!" else "Copied ${level.label}: $${formatPrice(level.price)}",
                                     Toast.LENGTH_SHORT
                                 ).show()
                             }
@@ -702,13 +702,13 @@ fun PairDetailScreen(
                         Spacer(modifier = Modifier.width(8.dp))
                         Column {
                             Text(
-                                text = if (isRomanUrdu) "Smart Money Concept (SMC) Markers" else "Smart Money Concepts (SMC) Markers",
+                                text = if (isRomanUrdu) "اسمارٹ منی کنسیپٹس (SMC) مارکرز" else "Smart Money Concepts (SMC) Markers",
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = TextPrimary
                             )
                             Text(
-                                text = if (isRomanUrdu) "Order Blocks, Fair Value Gaps, BOS aur CHoCH" else "Order Blocks, Fair Value Gaps, BOS & Liquidity",
+                                text = if (isRomanUrdu) "آرڈر بلاکس، فیئر ویلیو گیپس، BOS اور لیکویڈیٹی" else "Order Blocks, Fair Value Gaps, BOS & Liquidity",
                                 fontSize = 11.sp,
                                 color = TextMuted
                             )
@@ -724,11 +724,11 @@ fun PairDetailScreen(
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     val filters = listOf(
-                        "ALL" to (if (isRomanUrdu) "Sab" else "All"),
-                        "OB" to (if (isRomanUrdu) "Order Blocks" else "Order Blocks"),
-                        "FVG" to (if (isRomanUrdu) "FVG Gaps" else "Fair Value"),
+                        "ALL" to (if (isRomanUrdu) "تمام" else "All"),
+                        "OB" to (if (isRomanUrdu) "آرڈر بلاکس" else "Order Blocks"),
+                        "FVG" to (if (isRomanUrdu) "FVG گیپس" else "Fair Value"),
                         "BOS" to (if (isRomanUrdu) "BOS / CHoCH" else "BOS / CHoCH"),
-                        "LIQ" to (if (isRomanUrdu) "Liquidity" else "Liquidity")
+                        "LIQ" to (if (isRomanUrdu) "لیکویڈیٹی" else "Liquidity")
                     )
 
                     filters.forEach { (key, label) ->
@@ -755,7 +755,7 @@ fun PairDetailScreen(
                 // SMC 1: Active Order Blocks (Demand & Supply)
                 if (selectedSmcFilter in listOf("ALL", "OB")) {
                     Text(
-                        text = if (isRomanUrdu) "Active Order Blocks (Demand aur Supply)" else "Active Order Blocks (Supply & Demand)",
+                        text = if (isRomanUrdu) "فعال آرڈر بلاکس (ڈیمانڈ اور سپلائی)" else "Active Order Blocks (Supply & Demand)",
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Bold,
                         color = TextPrimary
@@ -767,7 +767,7 @@ fun PairDetailScreen(
 
                     if (activeDemand == null && activeSupply == null && (smc?.orderBlocks.isNullOrEmpty())) {
                         EmptyNoticeCard(
-                            text = if (isRomanUrdu) "Is timeframe par koi taaza Order Block nahi mila." else "No fresh Order Blocks on this timeframe."
+                            text = if (isRomanUrdu) "اس ٹائم فریم پر کوئی نیا آرڈر بلاک نہیں ملا۔" else "No fresh Order Blocks on this timeframe."
                         )
                     } else {
                         // Bullish Demand Zone Card
@@ -808,7 +808,7 @@ fun PairDetailScreen(
                 // SMC 2: Fair Value Gaps (FVG)
                 if (selectedSmcFilter in listOf("ALL", "FVG")) {
                     Text(
-                        text = if (isRomanUrdu) "Fair Value Gaps (FVG - Qadr Ka Khala)" else "Fair Value Gaps (FVG Imbalances)",
+                        text = if (isRomanUrdu) "فیئر ویلیو گیپس (FVG - عدم توازن)" else "Fair Value Gaps (FVG Imbalances)",
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Bold,
                         color = TextPrimary
@@ -818,7 +818,7 @@ fun PairDetailScreen(
                     val fvgs = smc?.fvgList ?: emptyList()
                     if (fvgs.isEmpty()) {
                         EmptyNoticeCard(
-                            text = if (isRomanUrdu) "Is timeframe par koi unmitigated FVG nahi mila." else "No unmitigated Fair Value Gaps detected."
+                            text = if (isRomanUrdu) "اس ٹائم فریم پر کوئی غیر پر شدہ FVG نہیں ملا۔" else "No unmitigated Fair Value Gaps detected."
                         )
                     } else {
                         fvgs.take(4).forEach { fvg ->
@@ -837,7 +837,7 @@ fun PairDetailScreen(
                 // SMC 3: Break of Structure (BOS) & Change of Character (CHoCH)
                 if (selectedSmcFilter in listOf("ALL", "BOS")) {
                     Text(
-                        text = if (isRomanUrdu) "Break of Structure (BOS) & CHoCH" else "Break of Structure (BOS) & CHoCH Reversals",
+                        text = if (isRomanUrdu) "بریک آف اسٹرکچر (BOS) اور CHoCH" else "Break of Structure (BOS) & CHoCH Reversals",
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Bold,
                         color = TextPrimary
@@ -849,7 +849,7 @@ fun PairDetailScreen(
 
                     if (bosList.isEmpty() && chochList.isEmpty()) {
                         EmptyNoticeCard(
-                            text = if (isRomanUrdu) "Abhi tak koi taaza BOS ya CHoCH trigger nahi hua." else "No active BOS or CHoCH structure shifts recorded."
+                            text = if (isRomanUrdu) "ابھی تک کوئی نیا BOS یا CHoCH ٹریگر نہیں ہوا۔" else "No active BOS or CHoCH structure shifts recorded."
                         )
                     } else {
                         bosList.takeLast(2).forEach { bos ->
@@ -877,7 +877,7 @@ fun PairDetailScreen(
                 // SMC 4: Liquidity Sweeps & Equal Highs/Lows
                 if (selectedSmcFilter in listOf("ALL", "LIQ")) {
                     Text(
-                        text = if (isRomanUrdu) "Liquidity Sweeps & Pools (EQH / EQL)" else "Liquidity Sweeps & Pool Levels",
+                        text = if (isRomanUrdu) "لیکویڈیٹی سویپس اور پولز (EQH / EQL)" else "Liquidity Sweeps & Pool Levels",
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Bold,
                         color = TextPrimary
@@ -890,13 +890,13 @@ fun PairDetailScreen(
 
                     if (sweeps.isEmpty() && eqh.isEmpty() && eql.isEmpty()) {
                         EmptyNoticeCard(
-                            text = if (isRomanUrdu) "Koi barri liquidity sweep ya equal level detect nahi hua." else "No major liquidity sweep or equal levels found."
+                            text = if (isRomanUrdu) "کوئی بڑی لیکویڈیٹی سویپ یا ایکول لیول نہیں ملا۔" else "No major liquidity sweep or equal levels found."
                         )
                     } else {
                         // EQH (Buy-side liquidity)
                         eqh.take(2).forEach { level ->
                             LiquidityPoolCard(
-                                title = if (isRomanUrdu) "Equal Highs (EQH - Buy-Side Liquidity Pool)" else "Equal Highs (EQH - Buy-side Pool)",
+                                title = if (isRomanUrdu) "ایکول ہائز (EQH - بائے سائیڈ لیکویڈیٹی)" else "Equal Highs (EQH - Buy-side Pool)",
                                 level = level,
                                 currentPrice = currentPrice,
                                 isHigh = true,
@@ -908,7 +908,7 @@ fun PairDetailScreen(
                         // EQL (Sell-side liquidity)
                         eql.take(2).forEach { level ->
                             LiquidityPoolCard(
-                                title = if (isRomanUrdu) "Equal Lows (EQL - Sell-Side Liquidity Pool)" else "Equal Lows (EQL - Sell-side Pool)",
+                                title = if (isRomanUrdu) "ایکول لوز (EQL - سیل سائیڈ لیکویڈیٹی)" else "Equal Lows (EQL - Sell-side Pool)",
                                 level = level,
                                 currentPrice = currentPrice,
                                 isHigh = false,
@@ -942,7 +942,7 @@ fun PairDetailScreen(
         ) {
             Column(modifier = Modifier.padding(14.dp)) {
                 Text(
-                    text = if (isRomanUrdu) "Fori Karwai (Quick Actions)" else "Instant Trade & Navigation Actions",
+                    text = if (isRomanUrdu) "فوری تجارتی اور نیویگیشن ایکشنز" else "Instant Trade & Navigation Actions",
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Bold,
                     color = TextPrimary
@@ -964,7 +964,7 @@ fun PairDetailScreen(
                         Icon(Icons.AutoMirrored.Filled.ShowChart, contentDescription = null, tint = Color.Black, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
-                            text = if (isRomanUrdu) "Chart Kholein" else "Open Chart",
+                            text = if (isRomanUrdu) "چارٹ کھولیں" else "Open Chart",
                             color = Color.Black,
                             fontWeight = FontWeight.Bold,
                             fontSize = 12.sp
@@ -982,7 +982,7 @@ fun PairDetailScreen(
                         Icon(Icons.Default.Bolt, contentDescription = null, tint = Color.Black, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
-                            text = if (isRomanUrdu) "Signal Dekhein" else "View Signal",
+                            text = if (isRomanUrdu) "سگنل دیکھیں" else "View Signal",
                             color = Color.Black,
                             fontWeight = FontWeight.Bold,
                             fontSize = 12.sp
@@ -1006,7 +1006,7 @@ fun PairDetailScreen(
                             .testTag("btn_detail_instant_long")
                     ) {
                         Text(
-                            text = if (isRomanUrdu) "Fori BUY (Long)" else "Instant LONG",
+                            text = if (isRomanUrdu) "فوری خریدیں (LONG)" else "Instant LONG",
                             fontWeight = FontWeight.Bold,
                             fontSize = 12.sp
                         )
@@ -1022,7 +1022,7 @@ fun PairDetailScreen(
                             .testTag("btn_detail_instant_short")
                     ) {
                         Text(
-                            text = if (isRomanUrdu) "Fori SELL (Short)" else "Instant SHORT",
+                            text = if (isRomanUrdu) "فوری بیچیں (SHORT)" else "Instant SHORT",
                             fontWeight = FontWeight.Bold,
                             fontSize = 12.sp
                         )
@@ -1184,9 +1184,9 @@ private fun OrderBlockDetailCard(
     val isBullish = orderBlock.isBullish
     val color = if (isBullish) BullGreen else BearRed
     val typeTitle = if (isBullish) {
-        if (isRomanUrdu) "Demand Zone (Bullish OB)" else "Demand Zone (Bullish OB)"
+        if (isRomanUrdu) "ڈیمانڈ زون (بلش OB)" else "Demand Zone (Bullish OB)"
     } else {
-        if (isRomanUrdu) "Supply Zone (Bearish OB)" else "Supply Zone (Bearish OB)"
+        if (isRomanUrdu) "سپلائی زون (بیرش OB)" else "Supply Zone (Bearish OB)"
     }
     val distPercent = if (currentPrice > 0) ((orderBlock.topPrice - currentPrice) / currentPrice) * 100 else 0.0
 
@@ -1228,9 +1228,9 @@ private fun OrderBlockDetailCard(
                 ) {
                     Text(
                         text = if (orderBlock.mitigated) {
-                            if (isRomanUrdu) "Mitigated (Test Shuda)" else "Mitigated"
+                            if (isRomanUrdu) "ٹیسٹ شدہ (Mitigated)" else "Mitigated"
                         } else {
-                            if (isRomanUrdu) "FRESH ZONE" else "FRESH ZONE"
+                            if (isRomanUrdu) "تازہ زون (FRESH)" else "FRESH ZONE"
                         },
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
@@ -1253,7 +1253,7 @@ private fun OrderBlockDetailCard(
                 )
                 Text(
                     text = if (abs(distPercent) < 0.2) {
-                        if (isRomanUrdu) "Qeemat Zone me hai!" else "Inside Zone!"
+                        if (isRomanUrdu) "قیمت زون کے اندر ہے!" else "Inside Zone!"
                     } else {
                         "${String.format(Locale.US, "%+.2f", distPercent)}%"
                     },
@@ -1275,9 +1275,9 @@ private fun FvgDetailCard(
     val isBullish = fvg.isBullish
     val color = if (isBullish) BullGreen else BearRed
     val title = if (isBullish) {
-        if (isRomanUrdu) "Bullish FVG (Dip Imbalance)" else "Bullish FVG (Discount Gap)"
+        if (isRomanUrdu) "بلش FVG (ڈسکاؤنٹ گیپ)" else "Bullish FVG (Discount Gap)"
     } else {
-        if (isRomanUrdu) "Bearish FVG (Rally Imbalance)" else "Bearish FVG (Premium Gap)"
+        if (isRomanUrdu) "بیرش FVG (پریمیم گیپ)" else "Bearish FVG (Premium Gap)"
     }
 
     Box(
@@ -1315,9 +1315,9 @@ private fun FvgDetailCard(
             ) {
                 Text(
                     text = if (fvg.mitigated) {
-                        if (isRomanUrdu) "Filled" else "Filled"
+                        if (isRomanUrdu) "پر شدہ (Filled)" else "Filled"
                     } else {
-                        if (isRomanUrdu) "Unfilled Magnet" else "Open Magnet"
+                        if (isRomanUrdu) "غیر پر شدہ میگنیٹ" else "Open Magnet"
                     },
                     fontSize = 10.sp,
                     fontWeight = FontWeight.Bold,
@@ -1352,16 +1352,16 @@ private fun BosDetailCard(
             Column {
                 Text(
                     text = if (isBullish) {
-                        if (isRomanUrdu) "Bullish Break of Structure (BOS)" else "Bullish Break of Structure (BOS)"
+                        if (isRomanUrdu) "بلش بریک آف اسٹرکچر (BOS)" else "Bullish Break of Structure (BOS)"
                     } else {
-                        if (isRomanUrdu) "Bearish Break of Structure (BOS)" else "Bearish Break of Structure (BOS)"
+                        if (isRomanUrdu) "بیرش بریک آف اسٹرکچر (BOS)" else "Bearish Break of Structure (BOS)"
                     },
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
                     color = color
                 )
                 Text(
-                    text = "${if (isRomanUrdu) "Tota Level: $" else "Broken Level: $"}${formatPrice(bos.brokenLevel)}",
+                    text = "${if (isRomanUrdu) "ٹوٹا لیول: $" else "Broken Level: $"}${formatPrice(bos.brokenLevel)}",
                     fontSize = 12.sp,
                     color = TextPrimary
                 )
@@ -1374,7 +1374,7 @@ private fun BosDetailCard(
                     .padding(horizontal = 6.dp, vertical = 2.dp)
             ) {
                 Text(
-                    text = if (bos.confirmed) (if (isRomanUrdu) "Tasdeeq Shuda" else "Confirmed") else (if (isRomanUrdu) "Zair-e-Ghaur" else "Pending"),
+                    text = if (bos.confirmed) (if (isRomanUrdu) "تصدیق شدہ" else "Confirmed") else (if (isRomanUrdu) "زیر غور" else "Pending"),
                     fontSize = 10.sp,
                     fontWeight = FontWeight.Bold,
                     color = color
@@ -1410,9 +1410,9 @@ private fun ChochDetailCard(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = if (isBullish) {
-                            if (isRomanUrdu) "CHoCH (Bullish Rujhaan Tabdeeli)" else "CHoCH (Bullish Trend Shift)"
+                            if (isRomanUrdu) "CHoCH (بلش ٹرینڈ تبدیلی)" else "CHoCH (Bullish Trend Shift)"
                         } else {
-                            if (isRomanUrdu) "CHoCH (Bearish Rujhaan Tabdeeli)" else "CHoCH (Bearish Trend Shift)"
+                            if (isRomanUrdu) "CHoCH (بیرش ٹرینڈ تبدیلی)" else "CHoCH (Bearish Trend Shift)"
                         },
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
@@ -1420,7 +1420,7 @@ private fun ChochDetailCard(
                     )
                 }
                 Text(
-                    text = "${if (isRomanUrdu) "Pivot Level: $" else "Pivot Level: $"}${formatPrice(choch.brokenLevel)}",
+                    text = "${if (isRomanUrdu) "پیوٹ لیول: $" else "Pivot Level: $"}${formatPrice(choch.brokenLevel)}",
                     fontSize = 12.sp,
                     color = TextPrimary
                 )
@@ -1433,7 +1433,7 @@ private fun ChochDetailCard(
                     .padding(horizontal = 6.dp, vertical = 2.dp)
             ) {
                 Text(
-                    text = if (isRomanUrdu) "Tabdeeli Reversal" else "Reversal Shift",
+                    text = if (isRomanUrdu) "ریورسل شفٹ" else "Reversal Shift",
                     fontSize = 10.sp,
                     fontWeight = FontWeight.Bold,
                     color = GoldenPocketGold
@@ -1488,9 +1488,9 @@ private fun SweepDetailCard(
     val isHigh = sweep.isHighSweep
     val color = if (isHigh) BearRed else BullGreen
     val title = if (isHigh) {
-        if (isRomanUrdu) "High Sweep (Kharidaaron Ka Trap - Bearish)" else "High Sweep (Buyers Trapped - Bearish)"
+        if (isRomanUrdu) "ہائی سویپ (خریداروں کا ٹریپ - بیرش)" else "High Sweep (Buyers Trapped - Bearish)"
     } else {
-        if (isRomanUrdu) "Low Sweep (Farokht-kunandgan Trap - Bullish)" else "Low Sweep (Sellers Trapped - Bullish)"
+        if (isRomanUrdu) "لو سویپ (فروخت کنندگان ٹریپ - بلش)" else "Low Sweep (Sellers Trapped - Bullish)"
     }
 
     Box(
@@ -1507,7 +1507,7 @@ private fun SweepDetailCard(
         ) {
             Column {
                 Text(text = title, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = color)
-                Text(text = "${if (isRomanUrdu) "Swept Level: $" else "Swept Level: $"}${formatPrice(sweep.sweptLevel)}", fontSize = 12.sp, color = TextPrimary)
+                Text(text = "${if (isRomanUrdu) "سویپ لیول: $" else "Swept Level: $"}${formatPrice(sweep.sweptLevel)}", fontSize = 12.sp, color = TextPrimary)
             }
             Box(
                 modifier = Modifier
@@ -1515,7 +1515,7 @@ private fun SweepDetailCard(
                     .background(color.copy(alpha = 0.2f))
                     .padding(horizontal = 6.dp, vertical = 2.dp)
             ) {
-                Text(text = if (isRomanUrdu) "Trap Sweep" else "Trap Purged", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = color)
+                Text(text = if (isRomanUrdu) "ٹریپ سویپ" else "Trap Purged", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = color)
             }
         }
     }

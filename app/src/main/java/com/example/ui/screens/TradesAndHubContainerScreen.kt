@@ -86,11 +86,11 @@ fun TradesAndHubContainerScreen(
         ) {
             val tradesCount = paperTrades.count { it.status == "OPEN" }
             val tab0Label = if (isRomanUrdu) {
-                if (tradesCount > 0) "Trades ($tradesCount) & Test" else "Paper Trades & Test"
+                if (tradesCount > 0) "پیپر ٹریڈز ($tradesCount)" else "پیپر ٹریڈز"
             } else {
                 if (tradesCount > 0) "Paper Trades ($tradesCount)" else "Paper Trades"
             }
-            val tab1Label = if (isRomanUrdu) "Markaz & VIP Hub" else "VIP & Markaz Hub"
+            val tab1Label = if (isRomanUrdu) "وی آئی پی اور ایڈمن ہب" else "VIP & Markaz Hub"
 
             // Tab 0: Paper Trades
             Box(

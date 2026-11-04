@@ -41,6 +41,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -51,13 +52,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ui.components.CandlestickChart
 import com.example.ui.components.TopBarHeader
+import com.example.ui.theme.UrduStrings
 import com.example.ui.screens.AnalyticsContainerScreen
 import com.example.ui.screens.AppHubScreen
 import com.example.ui.screens.BeginnerGuideScreen
@@ -149,133 +153,137 @@ fun SmartTradeApp(viewModel: TradingViewModel) {
         }
     }
 
-    Scaffold(
-        contentWindowInsets = WindowInsets(0, 0, 0, 0),
-        snackbarHost = { SnackbarHost(snackbarHostState) },
-        topBar = {
-            TopBarHeader(
-                symbol = uiState.currentSymbol,
-                stats = uiState.analysisResult?.futuresStats,
-                timeframe = uiState.selectedTimeframe,
-                isLoading = uiState.isLoading,
-                errorMessage = uiState.errorMessage,
-                watchlist = watchlist,
-                developerName = uiState.developerName,
-                isRomanUrdu = uiState.isRomanUrdu,
-                subscriptionPlan = subscriptionState.currentPlan,
-                isSubscribed = subscriptionState.isPrivilegedActive,
-                onSubscriptionClick = { viewModel.openSubscriptionModal(true) },
-                onToggleLanguage = { viewModel.toggleLanguage() },
-                onDeveloperClick = { viewModel.openAboutModal(true) },
-                onSymbolSelected = { viewModel.selectPair(it) },
-                onTimeframeSelected = { viewModel.selectTimeframe(it) },
-                onRefresh = { viewModel.refreshData() },
-                onAddWatchlist = { viewModel.addToWatchlist(it) },
-                isChartTab = uiState.selectedTab == 2
-            )
-        },
-        bottomBar = {
-            NavigationBar(
-                containerColor = CryptoSurface,
-                tonalElevation = 6.dp
-            ) {
-                // Tab 0: Signal
-                NavigationBarItem(
-                    selected = uiState.selectedTab == 0,
-                    onClick = { viewModel.selectTab(0) },
-                    icon = { Icon(Icons.Default.Bolt, contentDescription = "Signal") },
-                    label = { Text("Signal", fontSize = 9.sp, maxLines = 1, softWrap = false, fontWeight = if (uiState.selectedTab == 0) FontWeight.Bold else FontWeight.Normal) },
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = Color.Black,
-                        selectedTextColor = BullGreen,
-                        indicatorColor = BullGreen,
-                        unselectedIconColor = TextSecondary,
-                        unselectedTextColor = TextSecondary
-                    ),
-                    modifier = Modifier.testTag("tab_signal")
-                )
+    val isUrdu = uiState.isRomanUrdu
+    val layoutDirection = if (isUrdu) LayoutDirection.Rtl else LayoutDirection.Ltr
 
-                // Tab 1: Pair Detail (SMC & Fibonacci Retracement Tool)
-                NavigationBarItem(
-                    selected = uiState.selectedTab == 1,
-                    onClick = { viewModel.selectTab(1) },
-                    icon = { Icon(Icons.Default.Tune, contentDescription = "SMC & Fib") },
-                    label = { Text("SMC & Fib", fontSize = 9.sp, maxLines = 1, softWrap = false, fontWeight = if (uiState.selectedTab == 1) FontWeight.Bold else FontWeight.Normal) },
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = Color.Black,
-                        selectedTextColor = GoldenPocketGold,
-                        indicatorColor = GoldenPocketGold,
-                        unselectedIconColor = TextSecondary,
-                        unselectedTextColor = TextSecondary
-                    ),
-                    modifier = Modifier.testTag("tab_smc_fib")
+    CompositionLocalProvider(LocalLayoutDirection provides layoutDirection) {
+        Scaffold(
+            contentWindowInsets = WindowInsets(0, 0, 0, 0),
+            snackbarHost = { SnackbarHost(snackbarHostState) },
+            topBar = {
+                TopBarHeader(
+                    symbol = uiState.currentSymbol,
+                    stats = uiState.analysisResult?.futuresStats,
+                    timeframe = uiState.selectedTimeframe,
+                    isLoading = uiState.isLoading,
+                    errorMessage = uiState.errorMessage,
+                    watchlist = watchlist,
+                    developerName = uiState.developerName,
+                    isRomanUrdu = uiState.isRomanUrdu,
+                    subscriptionPlan = subscriptionState.currentPlan,
+                    isSubscribed = subscriptionState.isPrivilegedActive,
+                    onSubscriptionClick = { viewModel.openSubscriptionModal(true) },
+                    onToggleLanguage = { viewModel.toggleLanguage() },
+                    onDeveloperClick = { viewModel.openAboutModal(true) },
+                    onSymbolSelected = { viewModel.selectPair(it) },
+                    onTimeframeSelected = { viewModel.selectTimeframe(it) },
+                    onRefresh = { viewModel.refreshData() },
+                    onAddWatchlist = { viewModel.addToWatchlist(it) },
+                    isChartTab = uiState.selectedTab == 2
                 )
+            },
+            bottomBar = {
+                NavigationBar(
+                    containerColor = CryptoSurface,
+                    tonalElevation = 6.dp
+                ) {
+                    // Tab 0: Signal
+                    NavigationBarItem(
+                        selected = uiState.selectedTab == 0,
+                        onClick = { viewModel.selectTab(0) },
+                        icon = { Icon(Icons.Default.Bolt, contentDescription = "Signal") },
+                        label = { Text(UrduStrings.tabSignal(isUrdu), fontSize = 9.sp, maxLines = 1, softWrap = false, fontWeight = if (uiState.selectedTab == 0) FontWeight.Bold else FontWeight.Normal) },
+                        colors = NavigationBarItemDefaults.colors(
+                            selectedIconColor = Color.Black,
+                            selectedTextColor = BullGreen,
+                            indicatorColor = BullGreen,
+                            unselectedIconColor = TextSecondary,
+                            unselectedTextColor = TextSecondary
+                        ),
+                        modifier = Modifier.testTag("tab_signal")
+                    )
 
-                // Tab 2: Candlestick Chart
-                NavigationBarItem(
-                    selected = uiState.selectedTab == 2,
-                    onClick = { viewModel.selectTab(2) },
-                    icon = { Icon(Icons.AutoMirrored.Filled.ShowChart, contentDescription = "Chart") },
-                    label = { Text("Chart", fontSize = 9.sp, maxLines = 1, softWrap = false, fontWeight = if (uiState.selectedTab == 2) FontWeight.Bold else FontWeight.Normal) },
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = Color.Black,
-                        selectedTextColor = AccentCyan,
-                        indicatorColor = AccentCyan,
-                        unselectedIconColor = TextSecondary,
-                        unselectedTextColor = TextSecondary
-                    ),
-                    modifier = Modifier.testTag("tab_chart")
-                )
+                    // Tab 1: Pair Detail (SMC & Fibonacci Retracement Tool)
+                    NavigationBarItem(
+                        selected = uiState.selectedTab == 1,
+                        onClick = { viewModel.selectTab(1) },
+                        icon = { Icon(Icons.Default.Tune, contentDescription = "SMC & Fib") },
+                        label = { Text(UrduStrings.tabSmcFib(isUrdu), fontSize = 9.sp, maxLines = 1, softWrap = false, fontWeight = if (uiState.selectedTab == 1) FontWeight.Bold else FontWeight.Normal) },
+                        colors = NavigationBarItemDefaults.colors(
+                            selectedIconColor = Color.Black,
+                            selectedTextColor = GoldenPocketGold,
+                            indicatorColor = GoldenPocketGold,
+                            unselectedIconColor = TextSecondary,
+                            unselectedTextColor = TextSecondary
+                        ),
+                        modifier = Modifier.testTag("tab_smc_fib")
+                    )
 
-                // Tab 3: News & Market Impact (MANDATORY DEDICATED PAGE)
-                NavigationBarItem(
-                    selected = uiState.selectedTab == 3,
-                    onClick = { viewModel.selectTab(3) },
-                    icon = { Icon(Icons.Default.Newspaper, contentDescription = "News") },
-                    label = { Text(if (uiState.isRomanUrdu) "Khabrain" else "News", fontSize = 9.sp, maxLines = 1, softWrap = false, fontWeight = if (uiState.selectedTab == 3) FontWeight.Bold else FontWeight.Normal) },
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = Color.Black,
-                        selectedTextColor = AccentCyan,
-                        indicatorColor = AccentCyan,
-                        unselectedIconColor = TextSecondary,
-                        unselectedTextColor = TextSecondary
-                    ),
-                    modifier = Modifier.testTag("tab_news")
-                )
+                    // Tab 2: Candlestick Chart
+                    NavigationBarItem(
+                        selected = uiState.selectedTab == 2,
+                        onClick = { viewModel.selectTab(2) },
+                        icon = { Icon(Icons.AutoMirrored.Filled.ShowChart, contentDescription = "Chart") },
+                        label = { Text(UrduStrings.tabChart(isUrdu), fontSize = 9.sp, maxLines = 1, softWrap = false, fontWeight = if (uiState.selectedTab == 2) FontWeight.Bold else FontWeight.Normal) },
+                        colors = NavigationBarItemDefaults.colors(
+                            selectedIconColor = Color.Black,
+                            selectedTextColor = AccentCyan,
+                            indicatorColor = AccentCyan,
+                            unselectedIconColor = TextSecondary,
+                            unselectedTextColor = TextSecondary
+                        ),
+                        modifier = Modifier.testTag("tab_chart")
+                    )
 
-                // Tab 4: Analytics (Indicators & Futures)
-                NavigationBarItem(
-                    selected = uiState.selectedTab == 4,
-                    onClick = { viewModel.selectTab(4) },
-                    icon = { Icon(Icons.Default.Speed, contentDescription = "Analytics") },
-                    label = { Text(if (uiState.isRomanUrdu) "Ishare" else "Analytics", fontSize = 9.sp, maxLines = 1, softWrap = false, fontWeight = if (uiState.selectedTab == 4) FontWeight.Bold else FontWeight.Normal) },
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = Color.Black,
-                        selectedTextColor = BullGreen,
-                        indicatorColor = BullGreen,
-                        unselectedIconColor = TextSecondary,
-                        unselectedTextColor = TextSecondary
-                    ),
-                    modifier = Modifier.testTag("tab_analytics")
-                )
+                    // Tab 3: News & Market Impact (MANDATORY DEDICATED PAGE)
+                    NavigationBarItem(
+                        selected = uiState.selectedTab == 3,
+                        onClick = { viewModel.selectTab(3) },
+                        icon = { Icon(Icons.Default.Newspaper, contentDescription = "News") },
+                        label = { Text(UrduStrings.tabNews(isUrdu), fontSize = 9.sp, maxLines = 1, softWrap = false, fontWeight = if (uiState.selectedTab == 3) FontWeight.Bold else FontWeight.Normal) },
+                        colors = NavigationBarItemDefaults.colors(
+                            selectedIconColor = Color.Black,
+                            selectedTextColor = AccentCyan,
+                            indicatorColor = AccentCyan,
+                            unselectedIconColor = TextSecondary,
+                            unselectedTextColor = TextSecondary
+                        ),
+                        modifier = Modifier.testTag("tab_news")
+                    )
 
-                // Tab 5: Trades & Hub (Paper Trades, Backtest, VIP Codes, Admin, WhatsApp, Settings)
-                NavigationBarItem(
-                    selected = uiState.selectedTab == 5,
-                    onClick = { viewModel.selectTab(5) },
-                    icon = { Icon(Icons.Default.Widgets, contentDescription = "Trades & Hub") },
-                    label = { Text("Hub", fontSize = 9.sp, maxLines = 1, softWrap = false, fontWeight = if (uiState.selectedTab == 5) FontWeight.Bold else FontWeight.Normal) },
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = Color.Black,
-                        selectedTextColor = GoldenPocketGold,
-                        indicatorColor = GoldenPocketGold,
-                        unselectedIconColor = TextSecondary,
-                        unselectedTextColor = TextSecondary
-                    ),
-                    modifier = Modifier.testTag("tab_trades_hub")
-                )
+                    // Tab 4: Analytics (Indicators & Futures)
+                    NavigationBarItem(
+                        selected = uiState.selectedTab == 4,
+                        onClick = { viewModel.selectTab(4) },
+                        icon = { Icon(Icons.Default.Speed, contentDescription = "Analytics") },
+                        label = { Text(UrduStrings.tabAnalytics(isUrdu), fontSize = 9.sp, maxLines = 1, softWrap = false, fontWeight = if (uiState.selectedTab == 4) FontWeight.Bold else FontWeight.Normal) },
+                        colors = NavigationBarItemDefaults.colors(
+                            selectedIconColor = Color.Black,
+                            selectedTextColor = BullGreen,
+                            indicatorColor = BullGreen,
+                            unselectedIconColor = TextSecondary,
+                            unselectedTextColor = TextSecondary
+                        ),
+                        modifier = Modifier.testTag("tab_analytics")
+                    )
+
+                    // Tab 5: Trades & Hub (Paper Trades, Backtest, VIP Codes, Admin, WhatsApp, Settings)
+                    NavigationBarItem(
+                        selected = uiState.selectedTab == 5,
+                        onClick = { viewModel.selectTab(5) },
+                        icon = { Icon(Icons.Default.Widgets, contentDescription = "Trades & Hub") },
+                        label = { Text(UrduStrings.tabHub(isUrdu), fontSize = 9.sp, maxLines = 1, softWrap = false, fontWeight = if (uiState.selectedTab == 5) FontWeight.Bold else FontWeight.Normal) },
+                        colors = NavigationBarItemDefaults.colors(
+                            selectedIconColor = Color.Black,
+                            selectedTextColor = GoldenPocketGold,
+                            indicatorColor = GoldenPocketGold,
+                            unselectedIconColor = TextSecondary,
+                            unselectedTextColor = TextSecondary
+                        ),
+                        modifier = Modifier.testTag("tab_trades_hub")
+                    )
+                }
             }
-        }
     ) { innerPadding ->
         Box(
             modifier = Modifier
@@ -410,7 +418,7 @@ fun SmartTradeApp(viewModel: TradingViewModel) {
                         )
                         Spacer(modifier = Modifier.height(14.dp))
                         Text(
-                            text = if (uiState.isRomanUrdu) "Smart Trade AI data load ho raha hai..." else "Loading Smart Trade AI analysis...",
+                            text = UrduStrings.loadingData(uiState.isRomanUrdu),
                             color = TextPrimary,
                             fontWeight = FontWeight.Medium,
                             fontSize = 14.sp,
@@ -422,7 +430,7 @@ fun SmartTradeApp(viewModel: TradingViewModel) {
                             colors = ButtonDefaults.buttonColors(containerColor = BullGreen)
                         ) {
                             Text(
-                                text = if (uiState.isRomanUrdu) "Dobara Koshish Karein" else "Retry Connection",
+                                text = UrduStrings.retryConnection(uiState.isRomanUrdu),
                                 color = Color.Black,
                                 fontWeight = FontWeight.Bold
                             )
@@ -483,6 +491,7 @@ fun SmartTradeApp(viewModel: TradingViewModel) {
                     subscriptionManager = viewModel.subscriptionManager,
                     isUserAdmin = uiState.isUserAdmin,
                     adminEmail = uiState.googleUserEmail,
+                    isRomanUrdu = uiState.isRomanUrdu,
                     onSignInAdmin = { viewModel.signInWithGoogle(context) },
                     onPublishCodeCloud = { code, userRef, plan, days, paymentRef ->
                         viewModel.adminPublishCodeToCloud(code, userRef, plan, days, paymentRef)
@@ -536,4 +545,5 @@ fun SmartTradeApp(viewModel: TradingViewModel) {
             }
         }
     }
+}
 }

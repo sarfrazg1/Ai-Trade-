@@ -98,6 +98,7 @@ fun AdminScreen(
     subscriptionManager: SubscriptionManager,
     isUserAdmin: Boolean = false,
     adminEmail: String? = null,
+    isRomanUrdu: Boolean = false,
     onSignInAdmin: () -> Unit = {},
     onClose: () -> Unit,
     onPublishCodeCloud: (code: String, targetUserRef: String, plan: String, validityDays: Int, paymentRef: String) -> Unit = { _, _, _, _, _ -> },
@@ -149,7 +150,7 @@ fun AdminScreen(
                     Spacer(modifier = Modifier.height(14.dp))
 
                     Text(
-                        text = "Admin Portal",
+                        text = if (isRomanUrdu) "ایڈمن پورٹل" else "Admin Portal",
                         fontSize = 19.sp,
                         fontWeight = FontWeight.Bold,
                         color = TextPrimary
@@ -158,7 +159,7 @@ fun AdminScreen(
                     Spacer(modifier = Modifier.height(4.dp))
 
                     Text(
-                        text = "Realtime Database Activation Code Console",
+                        text = if (isRomanUrdu) "فائر بیس ریئل ٹائم ڈیٹا بیس کوڈ مینیجر" else "Realtime Database Activation Code Console",
                         fontSize = 12.sp,
                         color = TextSecondary,
                         textAlign = TextAlign.Center
@@ -172,8 +173,8 @@ fun AdminScreen(
                             passwordInput = it
                             if (passwordError != null) passwordError = null
                         },
-                        label = { Text("Admin Password", fontSize = 12.sp) },
-                        placeholder = { Text("Enter password", fontSize = 12.sp) },
+                        label = { Text(if (isRomanUrdu) "ایڈمن پاس ورڈ" else "Admin Password", fontSize = 12.sp) },
+                        placeholder = { Text(if (isRomanUrdu) "پاس ورڈ درج کریں" else "Enter password", fontSize = 12.sp) },
                         visualTransformation = PasswordVisualTransformation(),
                         singleLine = true,
                         colors = OutlinedTextFieldDefaults.colors(
@@ -208,7 +209,7 @@ fun AdminScreen(
                             modifier = Modifier.weight(1f),
                             shape = RoundedCornerShape(8.dp)
                         ) {
-                            Text("Back to App", color = TextSecondary, fontSize = 12.sp)
+                            Text(if (isRomanUrdu) "واپس جائیں" else "Back to App", color = TextSecondary, fontSize = 12.sp)
                         }
 
                         Button(
@@ -217,7 +218,7 @@ fun AdminScreen(
                                     isAuthenticated = true
                                     passwordError = null
                                 } else {
-                                    passwordError = "Wrong Password"
+                                    passwordError = if (isRomanUrdu) "غلط پاس ورڈ! براہ کرم درست پاس ورڈ درج کریں۔" else "Wrong Password"
                                 }
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = BullGreen),
@@ -226,7 +227,7 @@ fun AdminScreen(
                                 .weight(1f)
                                 .testTag("sign_in_admin_button")
                         ) {
-                            Text("Sign In Admin", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                            Text(if (isRomanUrdu) "لاگ ان کریں" else "Sign In Admin", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                         }
                     }
                 }

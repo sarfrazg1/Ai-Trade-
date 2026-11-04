@@ -162,14 +162,14 @@ private fun DisclaimerContent() {
             Spacer(modifier = Modifier.height(12.dp))
 
             Text(
-                text = "Roman Urdu Khulaasa (اردو خلاصہ):",
+                text = "اردو قانونی خلاصہ:",
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Bold,
                 color = AccentCyan
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = "Smart Trade AI sirf aur sirf taleemi aur tajziyati maqasid k liye banaya gaya hai. Yeh application kisi b qisam ki maali (financial) ya sarmayakari ki guarantee nahi deti. Cryptocurrency aur Futures trading me intehai zyada maali nuqsan ka khatra mojood hota hai. App k signals, SMC analysis, ya indicators waqti tor par ghalat ya takheer ka shikar ho sakte hain. Har sarmayakari ya trade ka faisla sarif (user) ki apni zati zimedari hai.",
+                text = "اسمارٹ ٹریڈ اے آئی صرف اور صرف تعلیمی اور مارکیٹ کے تجزیاتی مقاصد کے لیے بنایا گیا ہے۔ یہ ایپلی کیشن کسی بھی قسم کی مالی یا سرمایہ کاری کی ضمانت نہیں دیتی۔ کرپٹو کرنسی اور فیوچرز ٹریڈنگ میں انتہائی زیادہ مالی نقصان کا خطرہ موجود ہوتا ہے۔ ایپ کے سگنلز، ایس ایم سی تجزیات یا اشارے وقتی طور پر غلط یا تاخیر کا شکار ہو سکتے ہیں۔ ہر تجارتی فیصلے اور سرمائے کے انتظام کا پورا اختیار اور ذمہ داری صارف کی اپنی ہے۔",
                 fontSize = 12.sp,
                 color = TextSecondary,
                 lineHeight = 17.sp

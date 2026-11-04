@@ -127,7 +127,7 @@ fun SubscriptionScreen(
                 }
                 Spacer(modifier = Modifier.width(6.dp))
                 Text(
-                    text = if (isRomanUrdu) "Smart Trade AI Plans" else "Subscription Plans",
+                    text = if (isRomanUrdu) "اسمارٹ ٹریڈ اے آئی پلانز" else "Subscription Plans",
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
                     color = TextPrimary
@@ -145,8 +145,8 @@ fun SubscriptionScreen(
                     .padding(horizontal = 8.dp, vertical = 4.dp)
             ) {
                 Text(
-                    text = if (subscriptionState.isPrivilegedActive) "ACTIVE: ${subscriptionState.currentPlan.id}"
-                    else "FREE DEMO",
+                    text = if (subscriptionState.isPrivilegedActive) (if (isRomanUrdu) "فعال: ${subscriptionState.currentPlan.id}" else "ACTIVE: ${subscriptionState.currentPlan.id}")
+                    else (if (isRomanUrdu) "مفت ڈیمو" else "FREE DEMO"),
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
                     color = if (subscriptionState.isPrivilegedActive) BullGreen else WarningAmber
@@ -188,7 +188,7 @@ fun SubscriptionScreen(
                             color = TextPrimary
                         )
                         Text(
-                            text = if (isRomanUrdu) "Taleemi aur Market Tajziya Platform" else "Cryptocurrency Education & Market Analysis",
+                            text = if (isRomanUrdu) "کرپٹو ایجوکیشن اور مارکیٹ تجزیاتی پلیٹ فارم" else "Cryptocurrency Education & Market Analysis",
                             fontSize = 11.sp,
                             color = AccentCyan
                         )
@@ -198,7 +198,7 @@ fun SubscriptionScreen(
                 Spacer(modifier = Modifier.height(10.dp))
                 Text(
                     text = if (isRomanUrdu) {
-                        "Smart Trade AI ek taleemi platform hai jo Binance public data par mabni technical indicators, Smart Money Concepts (SMC) aur risk management rules faraham karta hai. Hum automated payment gateway k bajaye WhatsApp Business par asaan manual rabtay k zariye unique activation code jari karte hain."
+                        "اسمارٹ ٹریڈ اے آئی ایک تعلیمی پلیٹ فارم ہے جو بائننس پبلک ڈیٹا پر مبنی تکنیکی اشارے، اسمارٹ منی کنسیپٹس (SMC) اور رسک مینجمنٹ کے اصول فراہم کرتا ہے۔ پاکستان میں آسان دستیابی کے لیے ایکٹیویشن واٹس ایپ بزنس کے ذریعے کی جاتی ہے۔"
                     } else {
                         "Smart Trade AI is a dedicated educational and analytical tool designed to simplify futures market data, Smart Money Concepts (SMC), and disciplined risk management. To keep setup simple and accessible in Pakistan, subscriptions are manually managed and activated via WhatsApp Business."
                     },
@@ -225,7 +225,7 @@ fun SubscriptionScreen(
                 ) {
                     Column {
                         Text(
-                            text = if (isRomanUrdu) "Aapka User Reference ID:" else "Your User Reference ID:",
+                            text = if (isRomanUrdu) "آپ کا صارف ریفرنس آئی ڈی:" else "Your User Reference ID:",
                             fontSize = 11.sp,
                             color = TextMuted
                         )
@@ -263,7 +263,7 @@ fun SubscriptionScreen(
                     OutlinedTextField(
                         value = referralInput,
                         onValueChange = { referralInput = it },
-                        label = { Text(if (isRomanUrdu) "Influencer Referral Code (Ikhtiyari)" else "Influencer Referral Code (Optional)", fontSize = 11.sp) },
+                        label = { Text(if (isRomanUrdu) "انفلوئنسر ریفرل کوڈ (اختیاری)" else "Influencer Referral Code (Optional)", fontSize = 11.sp) },
                         placeholder = { Text("e.g. SARFRAZ20", fontSize = 11.sp) },
                         singleLine = true,
                         modifier = Modifier
@@ -281,16 +281,16 @@ fun SubscriptionScreen(
                         onClick = {
                             val success = onApplyReferralCode(referralInput)
                             referralMessage = if (success) {
-                                if (isRomanUrdu) "Referral code shamil ho gaya!" else "Referral code applied!"
+                                if (isRomanUrdu) "ریفرل کوڈ لاگو ہو گیا!" else "Referral code applied!"
                             } else {
-                                if (isRomanUrdu) "Ghair durust referral code" else "Invalid referral format"
+                                if (isRomanUrdu) "غلط فارمیٹ ریفرل کوڈ" else "Invalid referral format"
                             }
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = BullGreen),
                         shape = RoundedCornerShape(8.dp),
                         modifier = Modifier.testTag("apply_referral_button")
                     ) {
-                        Text(if (isRomanUrdu) "Apply" else "Apply", color = Color.Black, fontWeight = FontWeight.Bold)
+                        Text(if (isRomanUrdu) "لاگو کریں" else "Apply", color = Color.Black, fontWeight = FontWeight.Bold)
                     }
                 }
 
@@ -334,13 +334,13 @@ fun SubscriptionScreen(
                         Spacer(modifier = Modifier.width(10.dp))
                         Column {
                             Text(
-                                text = if (isRomanUrdu) "Firebase Cloud Sync" else "Firebase Cloud Backup",
+                                text = if (isRomanUrdu) "فائر بیس کلاؤڈ بیک اپ" else "Firebase Cloud Backup",
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = TextPrimary
                             )
                             Text(
-                                text = if (isGoogleSignedIn) (googleUserEmail ?: "Signed In") else (if (isRomanUrdu) "Apna data cloud per mehfooz karein" else "Save plans & trades to Cloud"),
+                                text = if (isGoogleSignedIn) (googleUserEmail ?: if (isRomanUrdu) "سائن ان ہیں" else "Signed In") else (if (isRomanUrdu) "اپنا ڈیٹا کلاؤڈ پر محفوظ کریں" else "Save plans & trades to Cloud"),
                                 fontSize = 11.sp,
                                 color = if (isGoogleSignedIn) BullGreen else TextMuted
                             )
@@ -349,7 +349,7 @@ fun SubscriptionScreen(
 
                     if (isGoogleSignedIn) {
                         TextButton(onClick = onSignOutGoogle) {
-                            Text("Sign Out", fontSize = 11.sp, color = BearRed)
+                            Text(if (isRomanUrdu) "لاگ آؤٹ" else "Sign Out", fontSize = 11.sp, color = BearRed)
                         }
                     }
                 }
@@ -366,7 +366,7 @@ fun SubscriptionScreen(
                             .testTag("sync_firestore_button")
                     ) {
                         Text(
-                            text = if (isRomanUrdu) "Firestore Cloud per Sync Karein" else "Sync to Firebase Firestore",
+                            text = if (isRomanUrdu) "فائر بیس فائر اسٹور پر سنک کریں" else "Sync to Firebase Firestore",
                             color = Color.Black,
                             fontWeight = FontWeight.Bold,
                             fontSize = 12.sp
@@ -382,7 +382,7 @@ fun SubscriptionScreen(
                             .testTag("google_sign_in_button")
                     ) {
                         Text(
-                            text = if (isRomanUrdu) "Google Account se Sign In Karein" else "Sign in with Google",
+                            text = if (isRomanUrdu) "گوگل اکاؤنٹ کے ساتھ سائن ان کریں" else "Sign in with Google",
                             color = Color.Black,
                             fontWeight = FontWeight.Bold,
                             fontSize = 12.sp
@@ -396,7 +396,7 @@ fun SubscriptionScreen(
 
         // Subscription Plans Header
         Text(
-            text = if (isRomanUrdu) "Dastyab Plans Muntakhab Karein:" else "Select Subscription Plan:",
+            text = if (isRomanUrdu) "سبسکرپشن پلان منتخب کریں:" else "Select Subscription Plan:",
             fontSize = 15.sp,
             fontWeight = FontWeight.Bold,
             color = TextPrimary
@@ -443,7 +443,7 @@ fun SubscriptionScreen(
                 val userRef = subscriptionState.userReference
 
                 val message = if (isRomanUrdu) {
-                    "Assalam-o-Alaikum, mein Smart Trade AI app k mutaliq rabta kar raha hun. Mera muntakhab plan $planText hai. Mera user reference $userRef hai. Mera influencer referral code $referralText hai. Baraye meharbani subscription aur payment ki hidayat faraham karein."
+                    "السلام علیکم، میں اسمارٹ ٹریڈ اے آئی ایپ کے متعلق رابطہ کر رہا ہوں۔ میرا منتخب پلان $planText ہے۔ میرا صارف ریفرنس $userRef ہے۔ میرا انفلوئنسر ریفرل کوڈ $referralText ہے۔ برائے مہربانی سبسکرپشن اور ادائیگی کی رہنمائی فراہم کریں۔"
                 } else {
                     "Hello, I am contacting you about Smart Trade AI. My selected plan is $planText. My user reference is $userRef. My influencer referral code is $referralText. Please provide the subscription and payment instructions."
                 }
@@ -479,7 +479,7 @@ fun SubscriptionScreen(
                 Icon(imageVector = Icons.Default.Phone, contentDescription = "WhatsApp", tint = Color.Black)
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = if (isRomanUrdu) "WhatsApp par Rabta Karein" else "Contact on WhatsApp",
+                    text = if (isRomanUrdu) "واٹس ایپ پر رابطہ کریں" else "Contact on WhatsApp",
                     fontSize = 15.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.Black
@@ -504,7 +504,7 @@ fun SubscriptionScreen(
                 Icon(imageVector = Icons.Default.Bolt, contentDescription = "Submit Trx", tint = BullGreen)
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = if (isRomanUrdu) "Payment Reference / Trx ID Darj Karein" else "Submit Payment Reference / Trx ID",
+                    text = if (isRomanUrdu) "ادائیگی ٹرانزیکشن آئی ڈی درج کریں" else "Submit Payment Reference / Trx ID",
                     fontSize = 13.sp,
                     fontWeight = FontWeight.SemiBold
                 )
@@ -528,7 +528,7 @@ fun SubscriptionScreen(
                 Icon(imageVector = Icons.Default.Key, contentDescription = "Activation Code", tint = AccentCyan)
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = if (isRomanUrdu) "Activation Code Darj Karein" else "Enter Activation Code",
+                    text = if (isRomanUrdu) "ایکٹیویشن کوڈ درج کریں" else "Enter Activation Code",
                     fontSize = 14.sp,
                     fontWeight = FontWeight.SemiBold
                 )
@@ -543,7 +543,7 @@ fun SubscriptionScreen(
             modifier = Modifier.align(Alignment.CenterHorizontally)
         ) {
             Text(
-                text = if (isRomanUrdu) "Free Demo Mode me App Dekhein →" else "Explore App in Free Demo Mode →",
+                text = if (isRomanUrdu) "مفت ڈیمو موڈ میں ایپ دیکھیں ←" else "Explore App in Free Demo Mode →",
                 fontSize = 13.sp,
                 color = TextSecondary
             )
@@ -558,7 +558,7 @@ fun SubscriptionScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = if (isRomanUrdu) "Disclaimer (Urdu/ENG)" else "Disclaimer",
+                text = if (isRomanUrdu) "ڈس کلیمر" else "Disclaimer",
                 fontSize = 11.sp,
                 color = AccentCyan,
                 modifier = Modifier
@@ -567,7 +567,7 @@ fun SubscriptionScreen(
             )
             Text(text = " • ", fontSize = 11.sp, color = TextMuted)
             Text(
-                text = if (isRomanUrdu) "Privacy Policy" else "Privacy Policy",
+                text = if (isRomanUrdu) "پرائیویسی پالیسی" else "Privacy Policy",
                 fontSize = 11.sp,
                 color = AccentCyan,
                 modifier = Modifier
@@ -576,7 +576,7 @@ fun SubscriptionScreen(
             )
             Text(text = " • ", fontSize = 11.sp, color = TextMuted)
             Text(
-                text = if (isRomanUrdu) "Terms of Use" else "Terms of Use",
+                text = if (isRomanUrdu) "شرائط و ضوابط" else "Terms of Use",
                 fontSize = 11.sp,
                 color = AccentCyan,
                 modifier = Modifier
@@ -590,7 +590,7 @@ fun SubscriptionScreen(
 
             // Admin Access link
             Text(
-                text = "⚙ Admin Management (PIN Protected)",
+                text = if (isRomanUrdu) "⚙ ایڈمن مینجمنٹ پورٹل" else "⚙ Admin Management (PIN Protected)",
                 fontSize = 10.sp,
                 color = TextMuted,
                 modifier = Modifier
@@ -611,7 +611,7 @@ fun SubscriptionScreen(
             containerColor = CryptoSurface,
             title = {
                 Text(
-                    text = if (isRomanUrdu) "Activation Code Darj Karein" else "Enter Activation Code",
+                    text = if (isRomanUrdu) "ایکٹیویشن کوڈ درج کریں" else "Enter Activation Code",
                     color = TextPrimary,
                     fontWeight = FontWeight.Bold
                 )
@@ -620,7 +620,7 @@ fun SubscriptionScreen(
                 Column {
                     Text(
                         text = if (isRomanUrdu) {
-                            "WhatsApp par administrator se mila hua unique activation code ya Realtime Database code yahan darj karein."
+                            "واٹس ایپ پر ایڈمنسٹریٹر سے موصول شدہ منفرد ایکٹیویشن کوڈ یہاں درج کریں۔"
                         } else {
                             "Enter the activation code from administrator or Firebase Realtime Database."
                         },
@@ -631,7 +631,7 @@ fun SubscriptionScreen(
                     OutlinedTextField(
                         value = inputCode,
                         onValueChange = { inputCode = it },
-                        label = { Text("Activation Code", fontSize = 11.sp) },
+                        label = { Text(if (isRomanUrdu) "ایکٹیویشن کوڈ" else "Activation Code", fontSize = 11.sp) },
                         placeholder = { Text("e.g. GOLD-G000X9LM-4521-0", fontSize = 11.sp) },
                         singleLine = true,
                         colors = OutlinedTextFieldDefaults.colors(
@@ -655,7 +655,7 @@ fun SubscriptionScreen(
                 Button(
                     onClick = {
                         if (inputCode.isBlank()) {
-                            errorMessage = "Please enter an activation code"
+                            errorMessage = if (isRomanUrdu) "برائے مہربانی ایکٹیویشن کوڈ درج کریں" else "Please enter an activation code"
                             return@Button
                         }
                         onRedeemCode(inputCode)
@@ -664,12 +664,12 @@ fun SubscriptionScreen(
                     colors = ButtonDefaults.buttonColors(containerColor = BullGreen),
                     modifier = Modifier.testTag("confirm_redeem_button")
                 ) {
-                    Text(if (isRomanUrdu) "Activate Karein" else "Activate Plan", color = Color.Black, fontWeight = FontWeight.Bold)
+                    Text(if (isRomanUrdu) "پلان فعال کریں" else "Activate Plan", color = Color.Black, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showRedeemDialog = false }) {
-                    Text("Cancel", color = TextMuted)
+                    Text(if (isRomanUrdu) "منسوخ کریں" else "Cancel", color = TextMuted)
                 }
             }
         )
@@ -685,7 +685,7 @@ fun SubscriptionScreen(
             containerColor = CryptoSurface,
             title = {
                 Text(
-                    text = if (isRomanUrdu) "Payment Reference / Trx ID" else "Submit Payment Reference",
+                    text = if (isRomanUrdu) "ادائیگی ٹرانزیکشن آئی ڈی جمع کرائیں" else "Submit Payment Reference",
                     color = TextPrimary,
                     fontWeight = FontWeight.Bold
                 )
@@ -694,7 +694,7 @@ fun SubscriptionScreen(
                 Column {
                     Text(
                         text = if (isRomanUrdu) {
-                            "Apna JazzCash, EasyPaisa ya Bank Transfer ka Transaction ID (Trx ID) darj karein. Yeh verification k liye administrator k database me submit ho jaye ga."
+                            "اپنا جاز کیش، ایزی پیسہ یا بینک ٹرانسفر کا ٹرانزیکشن آئی ڈی (Trx ID) درج کریں۔ یہ تصدیق کے لیے کلاؤڈ لیجر میں جمع ہو جائے گا۔"
                         } else {
                             "Enter your JazzCash, EasyPaisa, or Bank Transfer Transaction Reference ID. This will be recorded in the cloud verification ledger for the selected plan (${selectedPlan.title})."
                         },
@@ -705,7 +705,7 @@ fun SubscriptionScreen(
                     OutlinedTextField(
                         value = trxInput,
                         onValueChange = { trxInput = it },
-                        label = { Text("Trx ID / Bank Reference", fontSize = 11.sp) },
+                        label = { Text(if (isRomanUrdu) "ٹرانزیکشن آئی ڈی / بینک حوالہ" else "Trx ID / Bank Reference", fontSize = 11.sp) },
                         placeholder = { Text("e.g. TID-94810294", fontSize = 11.sp) },
                         singleLine = true,
                         colors = OutlinedTextFieldDefaults.colors(
@@ -729,7 +729,7 @@ fun SubscriptionScreen(
                 Button(
                     onClick = {
                         if (trxInput.isBlank()) {
-                            trxError = "Please enter a transaction ID"
+                            trxError = if (isRomanUrdu) "برائے مہربانی ٹرانزیکشن آئی ڈی درج کریں" else "Please enter a transaction ID"
                             return@Button
                         }
                         onSubmitPaymentProof(selectedPlan.id, trxInput.trim())
@@ -738,12 +738,12 @@ fun SubscriptionScreen(
                     colors = ButtonDefaults.buttonColors(containerColor = BullGreen),
                     modifier = Modifier.testTag("confirm_trx_button")
                 ) {
-                    Text(if (isRomanUrdu) "Submit Karein" else "Submit Proof", color = Color.Black, fontWeight = FontWeight.Bold)
+                    Text(if (isRomanUrdu) "ثبوت جمع کرائیں" else "Submit Proof", color = Color.Black, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showPaymentProofDialog = false }) {
-                    Text("Cancel", color = TextMuted)
+                    Text(if (isRomanUrdu) "منسوخ کریں" else "Cancel", color = TextMuted)
                 }
             }
         )
@@ -755,12 +755,12 @@ fun SubscriptionScreen(
             onDismissRequest = { showFallbackDialog = false },
             containerColor = CryptoSurface,
             title = {
-                Text("WhatsApp Not Detected", color = TextPrimary, fontWeight = FontWeight.Bold)
+                Text(if (isRomanUrdu) "واٹس ایپ نہیں ملا" else "WhatsApp Not Detected", color = TextPrimary, fontWeight = FontWeight.Bold)
             },
             text = {
                 Column {
                     Text(
-                        text = "WhatsApp could not be opened directly. Please contact our official WhatsApp Business number manually:",
+                        text = if (isRomanUrdu) "واٹس ایپ براہ راست نہیں کھل سکا۔ برائے مہربانی ہمارے آفیشل واٹس ایپ نمبر پر خود رابطہ کریں:" else "WhatsApp could not be opened directly. Please contact our official WhatsApp Business number manually:",
                         fontSize = 12.sp,
                         color = TextSecondary
                     )
@@ -773,7 +773,7 @@ fun SubscriptionScreen(
                     )
                     Spacer(modifier = Modifier.height(10.dp))
                     Text(
-                        text = "Prefilled message to copy:",
+                        text = if (isRomanUrdu) "کاپی کرنے کے لیے پہلے سے تیار پیغام:" else "Prefilled message to copy:",
                         fontSize = 11.sp,
                         color = TextMuted
                     )
@@ -797,12 +797,12 @@ fun SubscriptionScreen(
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = BullGreen)
                 ) {
-                    Text("Copy Message", color = Color.Black)
+                    Text(if (isRomanUrdu) "پیغام کاپی کریں" else "Copy Message", color = Color.Black)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showFallbackDialog = false }) {
-                    Text("Close", color = TextMuted)
+                    Text(if (isRomanUrdu) "بند کریں" else "Close", color = TextMuted)
                 }
             }
         )
@@ -816,6 +816,15 @@ private fun PlanOptionCard(
     isRomanUrdu: Boolean,
     onSelect: () -> Unit
 ) {
+    val displayPlanTitle = if (isRomanUrdu) {
+        when (plan) {
+            SubscriptionPlan.GOLDEN -> "گولڈن وی آئی پی پلان"
+            SubscriptionPlan.SILVER -> "سلور پرو پلان"
+            SubscriptionPlan.BRONZE -> "برونز بنیادی پلان"
+            SubscriptionPlan.FREE_TRIAL -> "مفت ڈیمو موڈ"
+        }
+    } else plan.title
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -845,7 +854,7 @@ private fun PlanOptionCard(
                     )
                     Spacer(modifier = Modifier.width(10.dp))
                     Text(
-                        text = plan.title,
+                        text = displayPlanTitle,
                         fontSize = 15.sp,
                         fontWeight = FontWeight.Bold,
                         color = TextPrimary
@@ -863,6 +872,26 @@ private fun PlanOptionCard(
             Spacer(modifier = Modifier.height(8.dp))
 
             plan.benefits.forEach { benefit ->
+                val localizedBenefit = if (isRomanUrdu) {
+                    when {
+                        benefit.contains("VIP 5m, 15m, 1H, 4H & 1D") -> "وی آئی پی 5M، 15M، 1H، 4H اور 1D ریئل ٹائم سگنلز"
+                        benefit.contains("Smart Money Concepts") -> "اسمارٹ منی کنسیپٹس (SMC) + کنفلوئنس انجن"
+                        benefit.contains("Automated Order Blocks") -> "خودکار آرڈر بلاکس، FVG اور فبوناکی ریٹریسمنٹ"
+                        benefit.contains("Direct WhatsApp VIP") -> "براہ راست واٹس ایپ وی آئی پی سپورٹ"
+                        benefit.contains("Standard 15m, 1H & 4H") -> "اسٹینڈرڈ 15M، 1H اور 4H ٹریڈنگ سیٹ اپس"
+                        benefit.contains("Technical Indicators Breakdown") -> "تکنیکی اشاریوں کی تفصیل (RSI, MACD, EMA)"
+                        benefit.contains("Automated Paper Trading") -> "خودکار پیپر ٹریڈنگ اور ٹریکنگ"
+                        benefit.contains("Guide Access") -> "اردو اور انگریزی ٹریڈر گائیڈ تک رسائی"
+                        benefit.contains("Daily Futures Market") -> "روزانہ فیوچرز مارکیٹ جائزہ اور فنڈنگ ریٹس"
+                        benefit.contains("Basic Swing High / Low") -> "سوئنگ ہائی / لو فبوناکی لیولز"
+                        benefit.contains("Educational Guide") -> "تعلیمی گائیڈ اور رسک مینجمنٹ سسٹم"
+                        benefit.contains("Explore Full Chart") -> "مکمل لائیو چارٹ اور بائننس ڈیٹا"
+                        benefit.contains("Test Paper Trading") -> "1,000 ڈالر ورچوئل بیلنس کے ساتھ پیپر ٹریڈ"
+                        benefit.contains("Preview Confluence Score") -> "کنفلوئنس اسکور اور تعلیمی مواد کا پیش نظارہ"
+                        else -> benefit
+                    }
+                } else benefit
+
                 Row(
                     modifier = Modifier.padding(vertical = 2.dp),
                     verticalAlignment = Alignment.CenterVertically
@@ -875,7 +904,7 @@ private fun PlanOptionCard(
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = benefit,
+                        text = localizedBenefit,
                         fontSize = 11.sp,
                         color = TextSecondary
                     )

@@ -450,7 +450,7 @@ class TradingViewModel(application: Application) : AndroidViewModel(application)
         viewModelScope.launch {
             repository.closePaperTrade(trade, currentPrice, "MANUALLY_CLOSED")
             val notif = if (_uiState.value.isRomanUrdu) {
-                "Paper trade band ho gaya @ $$currentPrice"
+                "پیپر ٹریڈ کامیابی سے بند ہو گئی @ $$currentPrice"
             } else {
                 "Paper trade closed manually @ $$currentPrice"
             }
@@ -542,7 +542,7 @@ class TradingViewModel(application: Application) : AndroidViewModel(application)
                 leverage = _uiState.value.leverage
             )
             val notif = if (_uiState.value.isRomanUrdu) {
-                "${if (isLong) "LONG" else "SHORT"} Trade chart per open ho gaya hai @ $$currentPrice"
+                "${if (isLong) "لانگ (LONG)" else "شارٹ (SHORT)"} ٹریڈ چارٹ پر شروع ہو گئی ہے @ $$currentPrice"
             } else {
                 "${if (isLong) "LONG" else "SHORT"} trade opened on chart @ $$currentPrice"
             }
